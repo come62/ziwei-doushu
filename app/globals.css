@@ -434,3 +434,43 @@ body {
    select 本身是半透明底 + 浅色字，Windows 上原生下拉列表是白底，浅灰字配白底看不清（#14） */
 [data-theme="dark"] select { color-scheme: dark; }
 [data-theme="dark"] select option { background-color: var(--bg-2); color: var(--tx-1); }
+
+/* 手机端紫微命盘字体清晰度优化 */
+@media (max-width: 767px) {
+  .palace-cell {
+    min-height: 82px !important;
+    padding: 7px 5px 6px !important;
+  }
+
+  .palace-cell [class~="text-[7px]"] {
+    font-size: 9px !important;
+    line-height: 1.3 !important;
+  }
+
+  .palace-cell [class~="text-[8px]"] {
+    font-size: 9px !important;
+    line-height: 1.35 !important;
+  }
+
+  .palace-cell [class~="text-[9px]"] {
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+  }
+
+  .palace-cell [class~="text-[10px]"] {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+
+  .palace-cell [class~="text-[13px]"] {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+  }
+}
+
+@media (max-width: 359px) {
+  .palace-cell {
+    min-height: 78px !important;
+    padding: 6px 4px 5px !important;
+  }
+}
