@@ -30,12 +30,21 @@ export function buildSiHuaOverlay(stemIndex: number): Record<string, string> {
   };
 }
 
+/** 四化文字：实色 */
 const SIHUA_COLORS: Record<string, string> = {
-  '禄': '#4ade80',
-  '权': '#60a5fa',
-  '科': '#facc15',
-  '忌': '#f87171',
+  '禄': '#059669',
+  '权': '#2563eb',
+  '科': '#ca8a04',
+  '忌': '#dc2626',
 };
+
+/** 字号随导航条宽度缩放（1cqw = 宽度的 1%） */
+const fs = (cqw: number, minPx: number): React.CSSProperties => ({
+  fontSize: `max(${minPx}px, ${cqw}cqw)`,
+});
+
+const GOLD = 'var(--t-gold)';
+const INACTIVE = 'var(--tx-2)';
 
 export default function TimeNav({
   chart,
@@ -74,7 +83,7 @@ export default function TimeNav({
   const overlayInfo = getOverlayInfo();
 
   return (
-    <div className="mb-3">
+    <div className="mb-3 [container-type:inline-size]">
       {/* Tab 行 */}
       <div
         className="flex items-center rounded-xl p-1 gap-1"
@@ -98,43 +107,45 @@ export default function TimeNav({
 
         {/* 流年 — 含年份切换 */}
         <div
-          className="relative flex-1 flex items-center justify-center rounded-lg py-1.5 gap-1 transition-all duration-200"
+          className="relative flex-1 flex items-center justify-center rounded-lg transition-all duration-200"
           style={{
+            padding: '1.5cqw 0',
+            gap: '1cqw',
             background: view === 'liunian'
               ? 'rgba(212,168,67,0.12)'
               : 'transparent',
             border: view === 'liunian'
-              ? '1px solid rgba(212,168,67,0.25)'
+              ? '1px solid rgba(212,168,67,0.35)'
               : '1px solid transparent',
           }}
         >
           <button
             onClick={() => onViewChange('liunian')}
-            className="text-[10px] font-medium flex-1 text-center"
-            style={{ color: view === 'liunian' ? 'var(--t-gold)' : 'var(--t-faint)' }}
+            className="font-medium flex-1 text-center"
+            style={{ ...fs(3.4, 11), color: view === 'liunian' ? GOLD : INACTIVE }}
           >
             流年
           </button>
           {/* 年份 +/- */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center" style={{ gap: '0.5cqw' }}>
             <button
               onClick={e => { e.stopPropagation(); onYearChange(liunianYear - 1); if (view !== 'liunian') onViewChange('liunian'); }}
-              className="text-[9px] w-4 h-4 flex items-center justify-center rounded"
-              style={{ color: 'var(--t-faint)' }}
+              className="flex items-center justify-center rounded"
+              style={{ ...fs(4, 12), width: '5.5cqw', height: '6cqw', color: INACTIVE }}
             >
               ‹
             </button>
             <span
-              className="text-[10px] font-mono min-w-[28px] text-center cursor-pointer"
-              style={{ color: view === 'liunian' ? 'var(--t-gold)' : 'var(--t-faint)' }}
+              className="font-mono text-center cursor-pointer"
+              style={{ ...fs(3.4, 11), minWidth: '9cqw', color: view === 'liunian' ? GOLD : INACTIVE }}
               onClick={() => onViewChange('liunian')}
             >
               {liunianYear}
             </span>
             <button
               onClick={e => { e.stopPropagation(); onYearChange(liunianYear + 1); if (view !== 'liunian') onViewChange('liunian'); }}
-              className="text-[9px] w-4 h-4 flex items-center justify-center rounded"
-              style={{ color: 'var(--t-faint)' }}
+              className="flex items-center justify-center rounded"
+              style={{ ...fs(4, 12), width: '5.5cqw', height: '6cqw', color: INACTIVE }}
             >
               ›
             </button>
@@ -148,16 +159,17 @@ export default function TimeNav({
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="flex items-center gap-2 mt-1.5 px-1 flex-wrap"
+          className="flex items-center mt-1.5 px-1 flex-wrap"
+          style={{ columnGap: '2.5cqw', rowGap: '0.5cqw' }}
         >
-          <span className="text-[9px]" style={{ color: 'var(--t-faint)' }}>
+          <span style={{ ...fs(3.2, 11), color: INACTIVE }}>
             {view === 'daxian' ? '大限' : `${liunianYear}`}·{overlayInfo.stemName}年四化：
           </span>
           {(['禄', '权', '科', '忌'] as const).map(sh => {
             const starName = Object.keys(overlayInfo.overlay).find(k => overlayInfo.overlay[k] === sh);
             if (!starName) return null;
             return (
-              <span key={sh} className="text-[9px] font-medium" style={{ color: SIHUA_COLORS[sh] }}>
+              <span key={sh} className="font-medium" style={{ ...fs(3.2, 11), color: SIHUA_COLORS[sh] }}>
                 {starName}化{sh}
               </span>
             );
@@ -180,11 +192,13 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className="flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-all duration-200"
+      className="flex-1 font-medium rounded-lg transition-all duration-200"
       style={{
+        ...fs(3.4, 11),
+        padding: '1.5cqw 0',
         background: active ? 'rgba(212,168,67,0.12)' : 'transparent',
-        color: active ? 'var(--t-gold)' : 'var(--t-faint)',
-        border: active ? '1px solid rgba(212,168,67,0.25)' : '1px solid transparent',
+        color: active ? GOLD : INACTIVE,
+        border: active ? '1px solid rgba(212,168,67,0.35)' : '1px solid transparent',
       }}
     >
       {children}
