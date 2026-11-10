@@ -5,7 +5,7 @@
 /* ─── 2.0 设计系统 Token ─────────────────────────────────── */
 :root {
   /* 字体 */
-  --font: -apple-system, 'PingFang SC', 'Helvetica Neue', 'Segoe UI', sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Helvetica Neue', 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', 'Menlo', 'Noto Sans Mono', 'Consolas', monospace;
 
   /* 背景层级 */
