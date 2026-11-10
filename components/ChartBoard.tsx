@@ -52,6 +52,11 @@ function getSanFangSiZheng(branch: number): [number, number, number, number] {
 
 const ANIMATION_ORDER = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4];
 
+/** 字号随容器宽度缩放（1cqw = 容器宽度的 1%） */
+const fs = (cqw: number, minPx: number): React.CSSProperties => ({
+  fontSize: `max(${minPx}px, ${cqw}cqw)`,
+});
+
 export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [timeView, setTimeView] = useState<TimeView>('mingpan');
@@ -145,42 +150,62 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           );
         })}
 
-        {/* 中央信息区 */}
+        {/* 中央信息区：字号跟着中间区宽度走，颜色全部实色 */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
-          className="flex flex-col items-center justify-center p-4 gap-3"
+          className="[container-type:inline-size]"
           style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: 'var(--t-bg)' }}
         >
-          <div className="text-5xl select-none leading-none" style={{ color: 'var(--t-gold)', opacity: 0.12, filter: 'drop-shadow(0 0 12px rgba(180,120,30,0.15))' }}>
-            ☯
-          </div>
-
-          <div className="text-center space-y-1">
-            <div className="text-[9px] tracking-[0.3em] font-medium" style={{ color: 'var(--t-gold)' }}>紫微斗数</div>
-            <div className="text-[10px] space-y-0.5" style={{ color: 'var(--t-faint)' }}>
-              <div>命宫 <span style={{ color: 'var(--t-gold)', opacity: 0.7 }}>{BRANCHES[chart.mingGongBranch]}</span></div>
-              <div>身宫 <span className="text-sky-500/70">{BRANCHES[chart.shenGongBranch]}</span></div>
-              <div className="text-[9px]" style={{ color: 'var(--t-gold)', opacity: 0.75 }}>{chart.wuxingJuName}</div>
+          <div
+            className="flex flex-col items-center justify-center h-full"
+            style={{ padding: '4cqw', gap: '4cqw' }}
+          >
+            <div
+              className="select-none leading-none"
+              style={{ ...fs(20, 36), color: 'var(--t-gold)', opacity: 0.15 }}
+            >
+              ☯
             </div>
-          </div>
 
-          {chart.currentDaXianIndex >= 0 && (() => {
-            const dx = chart.daXians[chart.currentDaXianIndex];
-            return (
-              <div className="border border-purple-500/30 rounded-lg px-3 py-1.5 text-center"
-                style={{ background: 'rgba(147,51,234,0.06)' }}>
-                <div className="text-[8px] text-purple-500/80 mb-0.5 tracking-wider">当前大限</div>
-                <div className="text-[12px] text-purple-400 font-medium tabular-nums">{dx.startAge}–{dx.endAge}岁</div>
-                <div className="text-[9px] text-purple-500/60">{dx.palaceName}</div>
+            <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '2cqw' }}>
+              <div
+                className="font-medium"
+                style={{ ...fs(6.5, 11), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
+              >
+                紫微斗数
               </div>
-            );
-          })()}
+              <div style={{ ...fs(7.5, 12), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '1cqw' }}>
+                <div>命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span></div>
+                <div>身宫 <span className="font-medium" style={{ color: '#0284c7' }}>{BRANCHES[chart.shenGongBranch]}</span></div>
+                <div className="font-medium" style={{ ...fs(7, 12), color: 'var(--t-gold)' }}>{chart.wuxingJuName}</div>
+              </div>
+            </div>
 
-          <div className="text-[8px] text-center leading-relaxed font-mono" style={{ color: 'var(--t-faint)', opacity: 0.75 }}>
-            {chart.lunarInfo.lunarYear}·{chart.lunarInfo.isLeapMonth ? '闰' : ''}
-            {chart.lunarInfo.lunarMonth}·{chart.lunarInfo.lunarDay}
+            {chart.currentDaXianIndex >= 0 && (() => {
+              const dx = chart.daXians[chart.currentDaXianIndex];
+              return (
+                <div
+                  className="text-center"
+                  style={{
+                    padding: '2.5cqw 6cqw',
+                    borderRadius: '3cqw',
+                    border: '1px solid rgba(147,51,234,0.55)',
+                    background: 'rgba(147,51,234,0.08)',
+                  }}
+                >
+                  <div style={{ ...fs(5.5, 10), color: '#9333ea', marginBottom: '0.8cqw', letterSpacing: '0.1em' }}>当前大限</div>
+                  <div className="font-medium tabular-nums" style={{ ...fs(8.5, 14), color: '#9333ea' }}>{dx.startAge}–{dx.endAge}岁</div>
+                  <div style={{ ...fs(6, 10), color: '#9333ea' }}>{dx.palaceName}</div>
+                </div>
+              );
+            })()}
+
+            <div className="text-center font-mono" style={{ ...fs(6, 10), color: 'var(--tx-2)', lineHeight: 1.5 }}>
+              {chart.lunarInfo.lunarYear}·{chart.lunarInfo.isLeapMonth ? '闰' : ''}
+              {chart.lunarInfo.lunarMonth}·{chart.lunarInfo.lunarDay}
+            </div>
           </div>
         </motion.div>
 
