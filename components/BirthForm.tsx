@@ -6,6 +6,8 @@ import { SHICHEN } from '@/lib/ziwei/constants';
 import { useTheme } from '@/components/ThemeProvider';
 import { PROVINCES } from '@/lib/ziwei/cities';
 import { formToBirthInfo, calcTrueSolarBranch } from '@/lib/ziwei/share';
+// @ts-ignore lunar-javascript runtime API has no complete upstream TS declarations
+import { Lunar, LunarYear } from 'lunar-javascript';
 
 export interface BirthFormState {
   name: string;
@@ -19,6 +21,8 @@ export interface BirthFormState {
   city: string;
   longitude: number;
   gender: 'male' | 'female';
+  calendarType?: 'solar' | 'lunar';
+  isLeapMonth?: boolean;
 }
 
 interface BirthFormProps {
@@ -39,6 +43,16 @@ function isValidDate(y: number, m: number, d: number): boolean {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
+function getLunarMonthDays(y: number, m: number, isLeap: boolean): number {
+  if (!y || !m) return 0;
+  try {
+    const lunarMonth = LunarYear.fromYear(y).getMonth(isLeap ? -m : m);
+    return lunarMonth ? lunarMonth.getDayCount() : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export default function BirthForm({ onSubmit, loading, initialData, onFormSave, hideSubmit }: BirthFormProps) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -55,6 +69,8 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
     city: initialData?.city ?? '',
     longitude: initialData?.longitude ?? 120,
     gender: initialData?.gender ?? 'male',
+    calendarType: initialData?.calendarType ?? 'solar',
+    isLeapMonth: initialData?.isLeapMonth ?? false,
   });
 
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -88,13 +104,20 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
   const m = parseInt(form.month) || 0;
   const d = parseInt(form.day) || 0;
 
+  const lunarLeapMonth = form.calendarType === 'lunar' && y >= 1900 && y <= 2026
+    ? (() => { try { return LunarYear.fromYear(y).getLeapMonth(); } catch { return 0; } })()
+    : 0;
+  const lunarMonthDays = form.calendarType === 'lunar' ? getLunarMonthDays(y, m, !!form.isLeapMonth) : 0;
   const errors = {
     year: !form.year ? '请选择出生年份'
       : y < 1900 || y > 2026 ? '年份范围：1900–2026'
       : '',
-    month: !form.month ? '请选择月份' : '',
+    month: !form.month ? '请选择月份'
+      : form.calendarType === 'lunar' && !getLunarMonthDays(y, m, false) ? '该农历月份不存在' : '',
     day: !form.day ? '请选择日期'
-      : form.year && form.month && !isValidDate(y, m, d) ? `${m}月没有${d}日`
+      : form.calendarType === 'lunar'
+        ? (lunarMonthDays && d > lunarMonthDays ? `该农历月只有${lunarMonthDays}天` : !lunarMonthDays ? '请检查农历月份' : '')
+        : form.year && form.month && !isValidDate(y, m, d) ? `${m}月没有${d}日`
       : '',
   };
   const hasError = Object.values(errors).some(Boolean);
@@ -112,7 +135,9 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
   const showSummary = steps[0] && steps[2] && !hasError;
   const summaryText = showSummary
     ? [
-        `${y}年${m}月${d}日`,
+        form.calendarType === 'lunar'
+          ? `农历${y}年${form.isLeapMonth ? '闰' : ''}${m}月${d}日`
+          : `${y}年${m}月${d}日`,
         form.city || (form.province ? form.province : ''),
         form.unknownTime ? '时辰不详' : `${SHICHEN_NAMES[branch]}时`,
         form.gender === 'male' ? '男' : '女',
@@ -235,7 +260,28 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
 
       {/* ── 出生日期 ── */}
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生日期（公历）</label>
+        <label style={{ display: 'block', fontSize: '11px', color: labelClr, marginBottom: '6px', letterSpacing: '0.05em' }}>出生日期</label>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '9px' }}>
+          {(['solar', 'lunar'] as const).map(type => {
+            const active = form.calendarType === type;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setForm({ ...form, calendarType: type, isLeapMonth: false })}
+                style={{
+                  flex: 1, padding: '9px', borderRadius: '12px', fontSize: '12px',
+                  border: `1px solid ${active ? focusBorder : inputBorder}`,
+                  background: active ? panelBg : inputBg,
+                  color: active ? goldText : labelClr,
+                  fontWeight: active ? 600 : 400,
+                }}
+              >
+                {type === 'solar' ? '公历' : '农历'}
+              </button>
+            );
+          })}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
           <div>
             <select
@@ -260,7 +306,7 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
             >
               <option value="">月份</option>
               {Array.from({ length: 12 }, (_, i) => i + 1).map(mo => (
-                <option key={mo} value={String(mo)}>{mo} 月</option>
+                <option key={mo} value={String(mo)}>{form.calendarType === 'lunar' ? `${mo}月` : `${mo} 月`}</option>
               ))}
             </select>
             <FieldError msg={showErr('month') ? errors.month : ''} />
@@ -273,13 +319,24 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
               required
             >
               <option value="">日期</option>
-              {Array.from({ length: 31 }, (_, i) => i + 1).map(dy => (
+              {Array.from({ length: form.calendarType === 'lunar' ? 30 : 31 }, (_, i) => i + 1).map(dy => (
                 <option key={dy} value={String(dy)}>{dy} 日</option>
               ))}
             </select>
             <FieldError msg={showErr('day') ? errors.day : ''} />
           </div>
         </div>
+        {form.calendarType === 'lunar' && lunarLeapMonth === m && m > 0 && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '8px', cursor: 'pointer', fontSize: '11px', color: labelClr }}>
+            <input
+              type="checkbox"
+              checked={!!form.isLeapMonth}
+              onChange={e => setForm({ ...form, isLeapMonth: e.target.checked, day: '' })}
+              style={{ width: '14px', height: '14px' }}
+            />
+            闰{m}月
+          </label>
+        )}
       </div>
 
       {/* ── 出生地点 ── */}
