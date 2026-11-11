@@ -2,9 +2,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
-import { getSiHuaByStem } from '@/lib/ziwei/sihua';
+import { getSiHuaByStem, getYearBranchIndex } from '@/lib/ziwei/sihua';
 import { BRANCHES, STEMS, PALACE_NAMES_ORDER } from '@/lib/ziwei/constants';
-import { getYearBranchIndex } from '@/lib/ziwei/sihua';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
 
