@@ -331,7 +331,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           <span key={h} className={`border px-1.5 py-0.5 rounded-full font-medium ${c}`}>{h}</span>
         ))}
         <span className="px-1.5 py-0.5 rounded-full" style={{ color: 'var(--t-faint)', border: '1px solid var(--t-border)' }}>
-          {displayMode === 'sanhe' ? '点击宫位看三方四正' : displayMode === 'feixing' ? '点击宫位查看该宫宫干飞化' : 'A禄 · B权 · C科 · D忌'}
+          {displayMode === 'sanhe' ? '点击宫位看三方四正 · 外箭头自化 · 内箭头对宫化入' : displayMode === 'feixing' ? '点击宫位查看该宫宫干飞化' : 'A禄 · B权 · C科 · D忌 · 外箭头自化 · 内箭头对宫化入'}
         </span>
       </motion.div>
     </div>
