@@ -4,6 +4,7 @@ import { STEMS, SI_HUA_TABLE } from '@/lib/ziwei/constants';
 import type { ZiweiChart } from '@/lib/ziwei/types';
 
 export type TimeView = 'mingpan' | 'daxian' | 'liunian';
+export type ChartDisplayMode = 'sanhe' | 'feixing' | 'sihua';
 
 interface TimeNavProps {
   chart: ZiweiChart;
@@ -11,6 +12,8 @@ interface TimeNavProps {
   liunianYear: number;
   onViewChange: (view: TimeView) => void;
   onYearChange: (year: number) => void;
+  displayMode: ChartDisplayMode;
+  onDisplayModeChange: (mode: ChartDisplayMode) => void;
 }
 
 /** 由年份计算天干索引 (0-9) */
@@ -33,8 +36,8 @@ export function buildSiHuaOverlay(stemIndex: number): Record<string, string> {
 /** 四化文字：实色 */
 const SIHUA_COLORS: Record<string, string> = {
   '禄': '#059669',
-  '权': '#2563eb',
-  '科': '#ca8a04',
+  '权': '#9333ea',
+  '科': '#2563eb',
   '忌': '#dc2626',
 };
 
@@ -52,6 +55,8 @@ export default function TimeNav({
   liunianYear,
   onViewChange,
   onYearChange,
+  displayMode,
+  onDisplayModeChange,
 }: TimeNavProps) {
   const currentDx = chart.daXians[chart.currentDaXianIndex];
 
@@ -84,6 +89,14 @@ export default function TimeNav({
 
   return (
     <div className="mb-3 [container-type:inline-size]">
+      {/* 盘面模式：与本命/大限/流年时间层级独立 */}
+      <div className="flex items-center rounded-xl p-1 gap-1 mb-2" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        {([
+          ['sanhe', '三合'], ['feixing', '飞星'], ['sihua', '四化'],
+        ] as const).map(([mode, label]) => (
+          <TabButton key={mode} active={displayMode === mode} onClick={() => onDisplayModeChange(mode)}>{label}</TabButton>
+        ))}
+      </div>
       {/* Tab 行 */}
       <div
         className="flex items-center rounded-xl p-1 gap-1"
