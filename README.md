@@ -298,6 +298,8 @@ npm test            # 排盘引擎回归（768 盘 × 紫微铁律、夏令时�
 
 每次 push 与 PR 都会在 GitHub Actions 上跑同一套（见 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)）。
 
+**Cloudflare Workers 部署**：在 Cloudflare Workers Builds 设置中，Build command 填 `npm run cf:build`，Deploy command 填 `npm run cf:deploy`。本项目保留 `npm run build` 为标准 `next build`；`cf:build` 会先安装 OpenNext Cloudflare 适配器与 Wrangler，再由适配器执行 Next.js 构建并生成 Worker 输出。
+
 > **注意：开源版不含后端 API 路由。**排盘、命盘展示、合盘起盘都在浏览器里用本仓库的引擎完成，**不需要任何 API Key**。AI 解读（`/api/interpret`）和合盘 AI 分析（`/api/heming`）需要你自己实现接口；没实现之前，这两处会直接提示「开源版不含该接口」，配置 API Key 也不会变成可用（#30 就是这个原因）。
 
 ---
