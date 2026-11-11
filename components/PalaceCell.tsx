@@ -97,7 +97,6 @@ export default function PalaceCell({
     ? minorStars
     : minorStars.filter(s => ['红鸾', '天喜', '天姚', '天刑'].includes(s.name));
   const siHuaLetters: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
-  const displayStars = displayMode === 'sanhe' ? stars : stars.filter(s => ['major', 'lucky', 'sha'].includes(s.type) || ['红鸾', '天喜', '天姚', '天刑'].includes(s.name));
 
   return (
     <motion.div
