@@ -103,7 +103,7 @@ export default function PalaceCell({
     ? luckyStars.filter(s => ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马'].includes(s.name))
     : luckyStars;
   const visibleShaStars = compactMode
-    ? shaStars.filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫'].includes(s.name))
+    ? shaStars.filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'].includes(s.name))
     : shaStars;
   const outwardArrow: Record<number, string> = {
     5: '↑', 6: '↑', 7: '↑', 8: '↑',
@@ -250,7 +250,7 @@ export default function PalaceCell({
         </div>
 
         {/* 吉星 */}
-        {luckyStars.length > 0 && (
+        {visibleLuckyStars.length > 0 && (
           <div className="flex flex-wrap" style={{ columnGap: '2cqw', marginTop: '1cqw' }}>
             {visibleLuckyStars.map(s => {
               const overlaySiHua = overlayStarSiHua?.[s.name];
@@ -281,7 +281,7 @@ export default function PalaceCell({
         )}
 
         {/* 煞星 */}
-        {shaStars.length > 0 && (
+        {visibleShaStars.length > 0 && (
           <div className="flex flex-wrap" style={{ columnGap: '2cqw' }}>
             {visibleShaStars.map(s => (
               <span key={s.name} className="leading-tight" style={{ ...fs(10.5, 9.5), color: C.sha }}>
