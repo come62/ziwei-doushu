@@ -1,6 +1,8 @@
 import type { BirthFormState } from '@/components/BirthForm';
 import type { BirthInfo } from './types';
 import { branchFromSolarMinutes, resolveZiweiDayOffset, shiftGregorianDate } from './true-solar-time';
+// @ts-ignore lunar-javascript runtime API has no complete upstream TS declarations
+import { Lunar } from 'lunar-javascript';
 
 function isValidLongitude(longitude: number): boolean {
   return longitude >= -180 && longitude <= 180;
@@ -26,6 +28,13 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
   let y = parseInt(form.year) || 0;
   let m = parseInt(form.month) || 0;
   let d = parseInt(form.day) || 0;
+  if (form.calendarType === 'lunar' && y > 0 && m > 0 && d > 0) {
+    const lunarMonth = form.isLeapMonth ? -m : m;
+    const solar = Lunar.fromYmd(y, lunarMonth, d).getSolar();
+    y = solar.getYear();
+    m = solar.getMonth();
+    d = solar.getDay();
+  }
   let hour = 0;
 
   // 晚子时换日按真太阳时判定，与时辰支同一口径（见 true-solar-time.ts 的 resolveZiweiDayOffset）。
@@ -58,6 +67,8 @@ export function formToSearchParams(form: BirthFormState): URLSearchParams {
   p.set('y', form.year);
   p.set('m', form.month);
   p.set('d', form.day);
+  if (form.calendarType === 'lunar') p.set('cal', 'lunar');
+  if (form.calendarType === 'lunar' && form.isLeapMonth) p.set('leap', '1');
   if (form.unknownTime) {
     p.set('u', '1');
   } else {
@@ -84,6 +95,8 @@ export function searchParamsToForm(params: URLSearchParams): Partial<BirthFormSt
     year,
     month,
     day,
+    calendarType: params.get('cal') === 'lunar' ? 'lunar' : 'solar',
+    isLeapMonth: params.get('cal') === 'lunar' && params.get('leap') === '1',
     unknownTime: params.get('u') === '1',
     clockHour: params.get('h') || '8',
     clockMinute: params.get('mi') || '0',
