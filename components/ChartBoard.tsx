@@ -69,7 +69,6 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
   // 计算当前叠加四化数据（大限或流年）
   const currentDx = chart.daXians[chart.currentDaXianIndex];
   const overlayData: Record<string, string> = (() => {
-    if (displayMode === 'sihua') return buildSiHuaOverlay(chart.lunarInfo.yearStem);
     if (displayMode === 'feixing' && selectedBranch !== null) {
       const selectedPalace = palaceMap[selectedBranch];
       if (selectedPalace) return buildSiHuaOverlay(selectedPalace.stem);
@@ -84,7 +83,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     }
     return {};
   })();
-  const overlayLabel = displayMode === 'sihua' ? '生' : displayMode === 'feixing' && selectedBranch !== null ? '飞' : timeView === 'daxian' ? '限' : timeView === 'liunian' ? '年' : undefined;
+  const overlayLabel = displayMode === 'feixing' && selectedBranch !== null ? '飞' : timeView === 'daxian' ? '限' : timeView === 'liunian' ? '年' : undefined;
 
   const handlePalaceClick = (branch: number) => {
     const isDeselecting = selectedBranch === branch;
