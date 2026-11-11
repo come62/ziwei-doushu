@@ -439,3 +439,4 @@ npm test            # 排盘引擎回归（768 盘 × 紫微铁律、夏令时�
 - 线上平台：[ouranic.cn](https://ouranic.cn/?from=gh-readme)（已完成 ICP 备案：京ICP备2026069066号-1）
 - 提问题、提修复：见 [CONTRIBUTING.md](./CONTRIBUTING.md)；使用交流请到 [讨论区](https://github.com/Renhuai123/ziwei-doushu/discussions)
 - 💕 发财的小手点一下：小红书 / 抖音 / 闲鱼 / X 关注 **王多鱼AI**，第一时间看上线 + 解锁更多紫微干货～
+
