@@ -10,6 +10,7 @@ interface PalaceCellProps {
   onStarClick?: (star: Star) => void;
   isSelected?: boolean;
   isSanFang?: boolean;
+  displayMode?: 'sanhe' | 'feixing' | 'sihua';
   delay?: number;
   /** 叠加四化：星名 → 四化类型（'禄'/'权'/'科'/'忌'） */
   overlayStarSiHua?: Record<string, string>;
@@ -22,8 +23,8 @@ interface PalaceCellProps {
 /** 四化：文字、边框都是实色 */
 const SIHUA_COLORS: Record<string, { color: string; bg: string }> = {
   '禄': { color: '#059669', bg: 'rgba(16,185,129,0.12)' },
-  '权': { color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
-  '科': { color: '#ca8a04', bg: 'rgba(234,179,8,0.14)' },
+  '权': { color: '#9333ea', bg: 'rgba(147,51,234,0.12)' },
+  '科': { color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
   '忌': { color: '#dc2626', bg: 'rgba(220,38,38,0.12)' },
 };
 
@@ -82,7 +83,7 @@ const SiHuaBadge = ({
 };
 
 export default function PalaceCell({
-  palace, onClick, onStarClick, isSelected, isSanFang, delay = 0,
+  palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
   overlayStarSiHua, overlayLabel, onSiHuaClick,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
@@ -92,6 +93,11 @@ export default function PalaceCell({
   const luckyStars = stars.filter(s => s.type === 'lucky');
   const shaStars = stars.filter(s => s.type === 'sha');
   const minorStars = stars.filter(s => s.type === 'minor');
+  const visibleMinorStars = displayMode === 'sanhe'
+    ? minorStars
+    : minorStars.filter(s => ['红鸾', '天喜', '天姚', '天刑'].includes(s.name));
+  const siHuaLetters: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
+  const displayStars = displayMode === 'sanhe' ? stars : stars.filter(s => ['major', 'lucky', 'sha'].includes(s.type) || ['红鸾', '天喜', '天姚', '天刑'].includes(s.name));
 
   return (
     <motion.div
@@ -193,11 +199,11 @@ export default function PalaceCell({
               >
                 <span
                   className="leading-tight font-bold tracking-tight cursor-pointer hover:brightness-125 transition-all"
-                  style={{ ...fs(15, 12.5), color: starColor }}
+                  style={{ ...fs(15, 12.5), color: displayMode === 'sihua' ? (star.siHua ? '#171717' : '#9ca3af') : overlaySiHua ? SIHUA_COLORS[overlaySiHua]?.color ?? starColor : starColor }}
                 >
                   {star.name}
                 </span>
-                {star.siHua && <SiHuaBadge siHua={star.siHua} />}
+                {star.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[star.siHua]}</span> : <SiHuaBadge siHua={star.siHua} />)}
                 {overlaySiHua && (
                   <SiHuaBadge
                     siHua={overlaySiHua}
@@ -225,8 +231,8 @@ export default function PalaceCell({
                   className="inline-flex items-center leading-tight"
                   style={{ ...fs(10.5, 9.5), color: C.lucky }}
                 >
-                  {s.name}
-                  {s.siHua && <SiHuaBadge siHua={s.siHua} />}
+                  <span style={{ color: displayMode === 'sihua' ? (s.siHua ? '#171717' : '#9ca3af') : overlaySiHua ? SIHUA_COLORS[overlaySiHua]?.color ?? C.lucky : C.lucky }}>{s.name}</span>
+                  {s.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[s.siHua]}</span> : <SiHuaBadge siHua={s.siHua} />)}
                   {overlaySiHua && (
                     <SiHuaBadge
                       siHua={overlaySiHua}
@@ -256,15 +262,15 @@ export default function PalaceCell({
         )}
 
         {/* 杂曜 */}
-        {minorStars.length > 0 && (
+        {visibleMinorStars.length > 0 && (
           <div className="flex flex-wrap" style={{ columnGap: '2cqw' }}>
-            {minorStars.map(s => (
+            {visibleMinorStars.map(s => (
               <span
                 key={s.name}
                 className="leading-tight"
-                style={{ ...fs(10.5, 9.5), color: C.minor }}
+                style={{ ...fs(10.5, 9.5), color: displayMode === 'sihua' ? (s.siHua ? '#171717' : '#9ca3af') : C.minor }}
               >
-                {s.name}{s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}{s.siHua && <SiHuaBadge siHua={s.siHua} />}
+                {s.name}{displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}{s.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ color: '#dc2626' }}>{siHuaLetters[s.siHua]}</span> : <SiHuaBadge siHua={s.siHua} />)}
               </span>
             ))}
           </div>
