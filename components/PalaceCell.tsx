@@ -13,6 +13,7 @@ interface PalaceCellProps {
   displayMode?: 'sanhe' | 'feixing' | 'sihua';
   selfSihuaMarks?: SelfSihuaMark[];
   incomingSihuaMarks?: SelfSihuaMark[];
+  overlayPalaceName?: string;
   delay?: number;
   /** 叠加四化：星名 → 四化类型（'禄'/'权'/'科'/'忌'） */
   overlayStarSiHua?: Record<string, string>;
@@ -86,7 +87,7 @@ const SiHuaBadge = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  selfSihuaMarks = [], incomingSihuaMarks = [], overlayStarSiHua, overlayLabel, onSiHuaClick,
+  selfSihuaMarks = [], incomingSihuaMarks = [], overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -305,6 +306,14 @@ export default function PalaceCell({
             ))}
           </div>
         )}
+      {overlayPalaceName && (
+        <div
+          className="mt-auto pt-1 text-right font-medium"
+          style={{ ...fs(9, 8), color: displayMode === 'sanhe' ? '#9333ea' : '#2563eb' }}
+        >
+          {overlayPalaceName}
+        </div>
+      )}
       </div>
     </motion.div>
   );
