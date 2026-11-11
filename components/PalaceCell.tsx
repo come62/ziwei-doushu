@@ -45,6 +45,20 @@ const C = {
   purple: '#9333ea',
 };
 
+const SihuaArrow = ({ direction, color }: { direction: string; color: string }) => {
+  const paths: Record<string, string> = {
+    '↑': 'M6 10V2 M2.8 5.2L6 2L9.2 5.2',
+    '↓': 'M6 2V10 M2.8 6.8L6 10L9.2 6.8',
+    '←': 'M10 6H2 M5.2 2.8L2 6L5.2 9.2',
+    '→': 'M2 6H10 M6.8 2.8L10 6L6.8 9.2',
+  };
+  return (
+    <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style={{ marginLeft: 2, flexShrink: 0 }}>
+      <path d={paths[direction] ?? paths['↑']} fill="none" stroke={color} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
 /** 字号随宫格宽度缩放（1cqw = 宫格宽度的 1%），任何屏幕宽度下比例一致 */
 const fs = (cqw: number, minPx: number): React.CSSProperties => ({
   fontSize: `max(${minPx}px, ${cqw}cqw)`,
@@ -119,10 +133,10 @@ export default function PalaceCell({
   const renderSihuaArrows = (starName: string) => (
     <>
       {selfSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <span key={'self-' + mark.siHua} title={'自化' + mark.siHua} className="ml-0.5 font-bold" style={{ color: SIHUA_COLORS[mark.siHua].color, fontSize: '10px' }}>{outwardArrow[branch]}</span>
+        <SihuaArrow key={'self-' + mark.siHua} direction={outwardArrow[branch]} color={SIHUA_COLORS[mark.siHua].color} />
       ))}
       {incomingSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <span key={'incoming-' + mark.siHua} title={'对宫化入' + mark.siHua} className="ml-0.5 font-bold" style={{ color: SIHUA_COLORS[mark.siHua].color, fontSize: '10px' }}>{inwardArrow[branch]}</span>
+        <SihuaArrow key={'incoming-' + mark.siHua} direction={inwardArrow[branch]} color={SIHUA_COLORS[mark.siHua].color} />
       ))}
     </>
   );
