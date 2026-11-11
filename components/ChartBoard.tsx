@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { getSiHuaByStem } from '@/lib/ziwei/sihua';
-import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
+import { BRANCHES, STEMS, PALACE_NAMES_ORDER } from '@/lib/ziwei/constants';
+import { getYearBranchIndex } from '@/lib/ziwei/sihua';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
 
@@ -86,6 +87,17 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
   // 计算当前叠加四化数据（大限或流年）
   const currentDx = chart.daXians[chart.currentDaXianIndex];
+  const getCyclePalaceName = (baseBranch: number, branch: number) =>
+    PALACE_NAMES_ORDER[((baseBranch - branch) % 12 + 12) % 12];
+  const cyclePalaceLabel = (branch: number): string | undefined => {
+    if (displayMode === 'sanhe' && timeView === 'daxian' && currentDx) {
+      return `大限${getCyclePalaceName(currentDx.palaceBranch, branch)}`;
+    }
+    if (displayMode !== 'sanhe' && timeView === 'liunian') {
+      return `流年${getCyclePalaceName(getYearBranchIndex(liunianYear), branch)}`;
+    }
+    return undefined;
+  };
   const overlayData: Record<string, string> = (() => {
     if (displayMode === 'feixing' && selectedBranch !== null) {
       const selectedPalace = palaceMap[selectedBranch];
@@ -170,6 +182,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 displayMode={displayMode}
                 selfSihuaMarks={siHuaMarksByBranch[branch]?.self}
                 incomingSihuaMarks={siHuaMarksByBranch[branch]?.incoming}
+                overlayPalaceName={cyclePalaceLabel(branch)}
                 delay={i * 0.04}
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
