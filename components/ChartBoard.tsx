@@ -1,7 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { ZiweiChart, Palace, Star } from '@/lib/ziwei/types';
+import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
+import { getSiHuaByStem } from '@/lib/ziwei/sihua';
 import { BRANCHES, STEMS } from '@/lib/ziwei/constants';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
@@ -65,6 +66,23 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
   const palaceMap: Record<number, Palace> = {};
   chart.palaces.forEach(p => { palaceMap[p.branch] = p; });
+
+  // 自化由本宫宫干触发；化入对宫由目标宫对宫的宫干触发。
+  const siHuaMarksByBranch: Record<number, { self: SelfSihuaMark[]; incoming: SelfSihuaMark[] }> = {};
+  chart.palaces.forEach(palace => {
+    const transforms = getSiHuaByStem(palace.stem);
+    const self = (['禄', '权', '科', '忌'] as const)
+      .map(siHua => ({ siHua, starName: transforms[siHua] }))
+      .filter(mark => mark.starName && palace.stars.some(star => star.name === mark.starName));
+    const opposite = palaceMap[(palace.branch + 6) % 12];
+    const oppositeTransforms = opposite ? getSiHuaByStem(opposite.stem) : null;
+    const incoming = oppositeTransforms
+      ? (['禄', '权', '科', '忌'] as const)
+          .map(siHua => ({ siHua, starName: oppositeTransforms[siHua] }))
+          .filter(mark => mark.starName && palace.stars.some(star => star.name === mark.starName))
+      : [];
+    siHuaMarksByBranch[palace.branch] = { self, incoming };
+  });
 
   // 计算当前叠加四化数据（大限或流年）
   const currentDx = chart.daXians[chart.currentDaXianIndex];
@@ -150,6 +168,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 isSelected={selectedBranch === branch}
                 isSanFang={!!(sanFangSet?.has(branch) && selectedBranch !== branch)}
                 displayMode={displayMode}
+                selfSihuaMarks={siHuaMarksByBranch[branch]?.self}
+                incomingSihuaMarks={siHuaMarksByBranch[branch]?.incoming}
                 delay={i * 0.04}
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
@@ -304,14 +324,14 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       >
         {[
           { h: '化禄', c: 'text-emerald-500 border-emerald-500/30' },
-          { h: '化权', c: 'text-blue-500 border-blue-500/30' },
-          { h: '化科', c: 'text-yellow-500 border-yellow-500/30' },
+          { h: '化权', c: 'text-purple-500 border-purple-500/30' },
+          { h: '化科', c: 'text-blue-500 border-blue-500/30' },
           { h: '化忌', c: 'text-red-500 border-red-500/30' },
         ].map(({ h, c }) => (
           <span key={h} className={`border px-1.5 py-0.5 rounded-full font-medium ${c}`}>{h}</span>
         ))}
         <span className="px-1.5 py-0.5 rounded-full" style={{ color: 'var(--t-faint)', border: '1px solid var(--t-border)' }}>
-          点击宫位看三方四正
+          {displayMode === 'sanhe' ? '点击宫位看三方四正' : displayMode === 'feixing' ? '点击宫位查看该宫宫干飞化' : 'A禄 · B权 · C科 · D忌'}
         </span>
       </motion.div>
     </div>
