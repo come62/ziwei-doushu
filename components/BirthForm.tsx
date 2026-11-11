@@ -300,7 +300,7 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
           <div>
             <select
               value={form.month}
-              onChange={e => { setForm({ ...form, month: e.target.value }); setTouched(t => ({ ...t, month: true })); }}
+              onChange={e => { setForm({ ...form, month: e.target.value, isLeapMonth: false }); setTouched(t => ({ ...t, month: true })); }}
               style={showErr('month') && errors.month ? errorInputStyle : inputStyle}
               required
             >
