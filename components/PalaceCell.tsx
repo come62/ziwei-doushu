@@ -1,6 +1,6 @@
 'use client';
 import { motion } from 'framer-motion';
-import type { Palace, Star } from '@/lib/ziwei/types';
+import type { Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { STEMS, BRANCHES } from '@/lib/ziwei/constants';
 import clsx from 'clsx';
 
@@ -11,6 +11,8 @@ interface PalaceCellProps {
   isSelected?: boolean;
   isSanFang?: boolean;
   displayMode?: 'sanhe' | 'feixing' | 'sihua';
+  selfSihuaMarks?: SelfSihuaMark[];
+  incomingSihuaMarks?: SelfSihuaMark[];
   delay?: number;
   /** 叠加四化：星名 → 四化类型（'禄'/'权'/'科'/'忌'） */
   overlayStarSiHua?: Record<string, string>;
@@ -84,7 +86,7 @@ const SiHuaBadge = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  overlayStarSiHua, overlayLabel, onSiHuaClick,
+  selfSihuaMarks = [], incomingSihuaMarks = [], overlayStarSiHua, overlayLabel, onSiHuaClick,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
