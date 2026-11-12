@@ -62,4 +62,32 @@ assert.ok(
   '34–43 岁大限应在子女宫',
 );
 
-console.log('✅ OURANIC 对照回归通过：日期、命身宫、五行局、紫微位置、大限均一致');
+
+
+// 重庆渝中区示例：农历癸亥年正月初十 = 公历 1983-02-22。
+// 08:00 北京时间经度修正约 -54 分钟，再加均时差约 -14 分钟，
+// 真太阳时约 06:52，应落卯时；只做经度修正会错误落在辰时。
+const chongqingForm: BirthFormState = {
+  name: '',
+  year: '1983',
+  month: '1',
+  day: '10',
+  clockHour: '8',
+  clockMinute: '0',
+  unknownTime: false,
+  province: '重庆市',
+  city: '渝中区',
+  longitude: 106.55,
+  gender: 'male',
+  calendarType: 'lunar',
+  isLeapMonth: false,
+};
+const chongqingBirth = formToBirthInfo(chongqingForm);
+assert.deepEqual(
+  { year: chongqingBirth.year, month: chongqingBirth.month, day: chongqingBirth.day },
+  { year: 1983, month: 2, day: 22 },
+  '重庆示例的农历日期应转换为公历 1983-02-22',
+);
+assert.equal(chongqingBirth.hour, 3, '重庆 1983-02-22 08:00 经度修正并加入均时差后应为卯时');
+
+console.log('✅ 农历转换、OURANIC 基准及重庆均时差回归检查完成');
