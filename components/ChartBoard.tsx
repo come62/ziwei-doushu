@@ -68,6 +68,8 @@ const p2 = (n: number) => String(n).padStart(2, '0');
 const SIHUA_ARROW_COLORS: Record<string, string> = {
   '禄': '#059669', '权': '#9333ea', '科': '#2563eb', '忌': '#dc2626',
 };
+const SIHUA_LETTER: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
+const LETTER_RED = '#9b2c1d'; // 四化页的线条/字母颜色（和原版一致的深红）
 const OUTER_PAD = 18; // 盘外留白（px），给外箭头用
 const LABEL_PAD = 24; // 再往外一圈（px），给方位字用
 
@@ -97,7 +99,7 @@ const INNER_ARROW: Record<number, { at: [number, number]; dir: [number, number] 
 };
 
 /** 在锚点处画一支箭头：dir 方向，offset 为沿边的错开距离（px），gap 为离锚点的起始距离（px） */
-function arrowShape(dir: [number, number], color: string, offset: number, gap: number) {
+function arrowShape(dir: [number, number], color: string, offset: number, gap: number, letter?: string) {
   const n = Math.hypot(dir[0], dir[1]);
   const ux = dir[0] / n, uy = dir[1] / n;
   const px = -uy, py = ux;
@@ -111,10 +113,19 @@ function arrowShape(dir: [number, number], color: string, offset: number, gap: n
   const [b1x, b1y] = rot(ang);
   const [b2x, b2y] = rot(-ang);
   return (
-    <path
-      d={`M${sx} ${sy} L${ex} ${ey} M${b1x} ${b1y} L${ex} ${ey} L${b2x} ${b2y}`}
-      fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-    />
+    <g>
+      <path
+        d={`M${sx} ${sy} L${ex} ${ey} M${b1x} ${b1y} L${ex} ${ey} L${b2x} ${b2y}`}
+        fill="none" stroke={color} strokeWidth={letter ? 1.4 : 2} strokeLinecap="round" strokeLinejoin="round"
+      />
+      {letter && (
+        <text
+          x={ex + ux * 9 + px * 6} y={ey + uy * 9 + py * 6}
+          fill={color} fontSize={11} fontWeight={700}
+          textAnchor="middle" dominantBaseline="central"
+        >{letter}</text>
+      )}
+    </g>
   );
 }
 
@@ -161,6 +172,35 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     }
     return undefined;
   };
+  // 四化页底部小格：大限宫位简称（大命/大兄…）+ 当前大限内每个流年的岁数
+  const birthYear = chart.birthInfo.origInput?.year ?? (new Date().getFullYear() - chart.currentAge + 1);
+  const bottomInfoFor = (branch: number): { yearAge?: string; daLabel?: string } => {
+    if (!currentDx) return {};
+    const cyc = getCyclePalaceName(currentDx.palaceBranch, branch);
+    const short = cyc.startsWith('交友') || cyc.startsWith('仆役') ? '友' : cyc.slice(0, 1);
+    let yearAge: string | undefined;
+    for (let age = currentDx.startAge; age <= currentDx.endAge; age++) {
+      const y = birthYear + age - 1;
+      if ((((y - 4) % 12) + 12) % 12 === branch) { yearAge = `${y}年${age}岁`; break; }
+    }
+    return { yearAge, daLabel: `大${short}` };
+  };
+
+  // 四化页的长箭头：宫干化出的星在别的宫 → 从本宫画到那个宫
+  const starPalaceBranch: Record<string, number> = {};
+  chart.palaces.forEach(pl => pl.stars.forEach(st => { starPalaceBranch[st.name] = pl.branch; }));
+  const sihuaLines: { from: number; to: number; siHua: string }[] = [];
+  if (displayMode === 'sihua') {
+    chart.palaces.forEach(pl => {
+      const t = getSiHuaByStem(pl.stem);
+      (['禄', '权', '科', '忌'] as const).forEach(h => {
+        const target = starPalaceBranch[t[h]];
+        if (target === undefined) return;
+        if (target !== pl.branch) sihuaLines.push({ from: pl.branch, to: target, siHua: h });
+      });
+    });
+  }
+
   const overlayData: Record<string, string> = (() => {
     if (displayMode === 'feixing' && selectedBranch !== null) {
       const selectedPalace = palaceMap[selectedBranch];
@@ -246,7 +286,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       <div
         className="grid rounded-2xl overflow-hidden relative"
         style={{
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           gridTemplateRows: 'repeat(4, auto)',
           gap: '1px',
           background: '#d1d5db',
@@ -259,7 +299,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           const palace = palaceMap[branch];
           if (!palace) return null;
           return (
-            <div key={branch} style={{ gridRow: row, gridColumn: col, background: '#ffffff' }}>
+            <div key={branch} style={{ gridRow: row, gridColumn: col, background: '#ffffff', display: 'flex', minWidth: 0 }}>
               <PalaceCell
                 palace={palace}
                 onClick={() => handlePalaceClick(branch)}
@@ -275,6 +315,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
                 shierShen={timeView === 'mingpan' ? shierShenFor(branch) : undefined}
+                bottomInfo={displayMode === 'sihua' ? bottomInfoFor(branch) : undefined}
               />
             </div>
           );
@@ -289,7 +330,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: '#ffffff', position: 'relative' }}
         >
           {/* 内箭头：对宫化入（画在对宫靠中央的一侧，指向本宫） */}
-          {showBigArrows && (
+          {showBigArrows && displayMode !== 'sihua' && (
             <svg
               width="100%" height="100%"
               className="pointer-events-none"
@@ -313,11 +354,11 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           )}
           <div
             className="flex flex-col items-center justify-center h-full"
-            style={{ padding: '3cqw', gap: '2.5cqw' }}
+            style={{ padding: '2cqw', gap: '1.6cqw' }}
           >
             <div
               className="font-medium"
-              style={{ ...fs(6.5, 11), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
+              style={{ ...fs(5.4, 10), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
             >
               紫微斗数
             </div>
@@ -325,7 +366,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             {/* 命宫 / 身宫 / 五行局 / 命主 / 身主 */}
             <div
               className="text-center"
-              style={{ ...fs(5.6, 10), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.8cqw', lineHeight: 1.35 }}
+              style={{ ...fs(4.5, 9), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.6cqw', lineHeight: 1.3 }}
             >
               <div>
                 命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span>
@@ -347,11 +388,11 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 <div
                   className="text-center"
                   style={{
-                    padding: '1.5cqw 5cqw',
+                    padding: '1cqw 4cqw',
                     borderRadius: '3cqw',
                     border: '1px solid rgba(147,51,234,0.55)',
                     background: 'rgba(147,51,234,0.08)',
-                    ...fs(5.6, 10),
+                    ...fs(4.5, 9),
                     color: '#9333ea',
                   }}
                 >
@@ -363,7 +404,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             {/* 钟表时间 / 真太阳时 / 农历 */}
             <div
               className="text-center"
-              style={{ ...fs(5.2, 9.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.8cqw', lineHeight: 1.35 }}
+              style={{ ...fs(4.2, 8.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.5cqw', lineHeight: 1.3 }}
             >
               {orig && (
                 <div>
@@ -386,12 +427,12 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             {pillarRows.length > 0 && (
               <div
                 style={{
-                  ...fs(5.2, 9.5),
+                  ...fs(4.2, 8.5),
                   color: 'var(--tx-2)',
                   display: 'grid',
                   gridTemplateColumns: 'auto repeat(4, auto)',
-                  columnGap: '3cqw',
-                  rowGap: '0.8cqw',
+                  columnGap: '2.5cqw',
+                  rowGap: '0.5cqw',
                   alignItems: 'center',
                   justifyItems: 'center',
                   lineHeight: 1.35,
@@ -414,12 +455,44 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
             {/* 出生地 · 真太阳时校正 */}
             {solar && solar.corrected && (
-              <div style={{ ...fs(4.6, 9), color: 'var(--t-faint)' }}>
+              <div style={{ ...fs(3.8, 8), color: 'var(--t-faint)' }}>
                 {chart.birthInfo.city ? `${chart.birthInfo.city} · ` : ''}真太阳时{formatSignedMinutes(solar.totalCorrectionMinutes)}分
               </div>
             )}
           </div>
         </motion.div>
+
+        {/* ── 四化页：宫干四化的长箭头（A禄 B权 C科 D忌） ── */}
+        {displayMode === 'sihua' && (
+          <svg
+            width="100%" height="100%"
+            className="pointer-events-none"
+            style={{ position: 'absolute', inset: 0, zIndex: 15 }}
+          >
+            <defs>
+              <marker id="sihua-head" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0 0.5 L8.5 4.5 L0 8.5 Z" fill={LETTER_RED} />
+              </marker>
+            </defs>
+            {sihuaLines.map((ln, i) => {
+              const a = BRANCH_SVG_POS[ln.from], b = BRANCH_SVG_POS[ln.to];
+              const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+              const ux = (b[0] - a[0]) / dist, uy = (b[1] - a[1]) / dist;
+              const edge = 9; // 离宫中心 9%（约宫格边缘）起笔/收笔
+              const [x1, y1] = [a[0] + ux * edge, a[1] + uy * edge];
+              const [x2, y2] = [b[0] - ux * edge, b[1] - uy * edge];
+              const [lx, ly] = [b[0] - ux * (edge - 3.2), b[1] - uy * (edge - 3.2)];
+              return (
+                <g key={`ln-${i}`}>
+                  <line x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`}
+                    stroke={LETTER_RED} strokeWidth={1} markerEnd="url(#sihua-head)" opacity={0.8} />
+                  <text x={`${lx}%`} y={`${ly}%`} fill={LETTER_RED} fontSize={10} fontWeight={700}
+                    textAnchor="middle" dominantBaseline="central">{SIHUA_LETTER[ln.siHua]}</text>
+                </g>
+              );
+            })}
+          </svg>
+        )}
 
         {/* ── 三方四正 SVG 连线（绝对定位在 grid 内部，受 overflow:hidden 裁切） ── */}
         <AnimatePresence>
@@ -506,13 +579,20 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
               const cfg = OUTER_ARROW[pl.branch];
               const marks = siHuaMarksByBranch[pl.branch]?.self ?? [];
               if (!cfg) return null;
+              const isSihua = displayMode === 'sihua';
               return marks.map((m, i) => (
                 <svg
                   key={`out-${pl.branch}-${m.siHua}`}
                   x={`${cfg.at[0]}%`} y={`${cfg.at[1]}%`}
                   width="1" height="1" style={{ overflow: 'visible' }}
                 >
-                  {arrowShape(cfg.dir, SIHUA_ARROW_COLORS[m.siHua], (i - (marks.length - 1) / 2) * 9, 3)}
+                  {arrowShape(
+                    cfg.dir,
+                    isSihua ? LETTER_RED : SIHUA_ARROW_COLORS[m.siHua],
+                    (i - (marks.length - 1) / 2) * (isSihua ? 16 : 9),
+                    3,
+                    isSihua ? SIHUA_LETTER[m.siHua] : undefined,
+                  )}
                 </svg>
               ));
             })}

@@ -2,7 +2,6 @@
 import { motion } from 'framer-motion';
 import type { Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { STEMS, BRANCHES } from '@/lib/ziwei/constants';
-import clsx from 'clsx';
 
 interface PalaceCellProps {
   palace: Palace;
@@ -11,8 +10,10 @@ interface PalaceCellProps {
   isSelected?: boolean;
   isSanFang?: boolean;
   displayMode?: 'sanhe' | 'feixing' | 'sihua';
+  /** 以下两个由大箭头取代，保留是为了兼容 ChartBoard 的调用 */
   selfSihuaMarks?: SelfSihuaMark[];
   incomingSihuaMarks?: SelfSihuaMark[];
+  /** 宫位左上角的小标签，如「流年兄弟宫」「大限疾厄」 */
   overlayPalaceName?: string;
   delay?: number;
   /** 叠加四化：星名 → 四化类型（'禄'/'权'/'科'/'忌'） */
@@ -23,82 +24,63 @@ interface PalaceCellProps {
   onSiHuaClick?: (starName: string, siHua: string) => void;
   /** 宫位底部三行十二神：[博士十二神, 将前十二神, 岁前十二神] */
   shierShen?: string[];
+  /** 四化页底部小格：流年岁数（如「2025年43岁」）、大限宫名（如「大夫」） */
+  bottomInfo?: { yearAge?: string; daLabel?: string };
 }
 
-/** 四化：文字、边框都是实色 */
+/** 四化：三合页用实色小方块（白字），四化页用红色字母 */
 const SIHUA_COLORS: Record<string, { color: string; bg: string }> = {
   '禄': { color: '#059669', bg: 'rgba(16,185,129,0.12)' },
   '权': { color: '#9333ea', bg: 'rgba(147,51,234,0.12)' },
   '科': { color: '#2563eb', bg: 'rgba(37,99,235,0.12)' },
   '忌': { color: '#dc2626', bg: 'rgba(220,38,38,0.12)' },
 };
+const SIHUA_LETTER: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
+const LETTER_RED = '#9b2c1d';
 
-/** 所有文字用实色，不带透明度 */
-const C = {
-  starBright: '#d97706',
-  starNormal: '#b45309',
-  starDim: '#a16207',
-  lucky: '#0284c7',
-  sha: '#dc2626',
-  minor: 'var(--tx-2)',
-  label: 'var(--tx-2)',
-  mingGong: '#d97706',
-  shenGong: '#0284c7',
-  purple: '#9333ea',
-};
-
-const SihuaArrow = ({ direction, color }: { direction: string; color: string }) => {
-  const paths: Record<string, string> = {
-    '↑': 'M6 10V2 M2.8 5.2L6 2L9.2 5.2',
-    '↓': 'M6 2V10 M2.8 6.8L6 10L9.2 6.8',
-    '←': 'M10 6H2 M5.2 2.8L2 6L5.2 9.2',
-    '→': 'M2 6H10 M6.8 2.8L10 6L6.8 9.2',
-  };
-  return (
-    <svg width="10" height="10" viewBox="0 0 12 12" aria-hidden="true" style={{ marginLeft: 2, flexShrink: 0 }}>
-      <path d={paths[direction] ?? paths['↑']} fill="none" stroke={color} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-};
+/** 星曜颜色：主星深红，吉星靛蓝，煞星紫，杂曜深灰 */
+const KIND_COLOR = {
+  major: '#9a2f22',
+  lucky: '#2447a0',
+  sha: '#6d28a8',
+  minor: '#262626',
+} as const;
 
 /** 字号随宫格宽度缩放（1cqw = 宫格宽度的 1%），任何屏幕宽度下比例一致 */
 const fs = (cqw: number, minPx: number): React.CSSProperties => ({
   fontSize: `max(${minPx}px, ${cqw}cqw)`,
 });
 
-const SiHuaBadge = ({
-  siHua,
-  overlay,
-  label,
-  onClick,
-}: {
-  siHua: string;
-  overlay?: boolean;
-  label?: string;
-  onClick?: (e: React.MouseEvent) => void;
-}) => {
+/** 宫名拆成两个字竖着放进小格：命宫→命/宫，迁移→迁/移 */
+const twoChars = (name: string): [string, string] => {
+  const n = name === '仆役' ? '交友' : name;
+  const base = n.endsWith('宫') && n.length > 2 ? n.slice(0, -1) : n;
+  return [base[0] ?? '', base[1] ?? '宫'];
+};
+
+const SiHuaSquare = ({
+  siHua, overlay, label, onClick,
+}: { siHua: string; overlay?: boolean; label?: string; onClick?: (e: React.MouseEvent) => void }) => {
   const c = SIHUA_COLORS[siHua];
   return (
     <span
-      className={clsx(
-        'inline-flex items-center justify-center rounded-sm border leading-none font-bold flex-shrink-0',
-        overlay && 'border-dashed',
-        onClick && 'cursor-pointer',
-      )}
+      className="inline-flex items-center justify-center font-bold leading-tight"
       style={{
-        ...fs(9, 9),
-        minWidth: '4.2cqw',
-        minHeight: '4.2cqw',
-        padding: '0.45cqw 0.7cqw',
-        marginLeft: '1.5cqw',
-        borderWidth: '1px',
-        color: c?.color,
-        background: c?.bg,
-        borderColor: c?.color,
+        ...fs(7, 7.5),
+        minWidth: '10cqw',
+        padding: '0.8cqw 1cqw',
+        borderRadius: '1.6cqw',
+        color: '#fff',
+        background: c?.color,
+        opacity: overlay ? 0.85 : 1,
+        outline: overlay ? '1px dashed rgba(0,0,0,0.35)' : 'none',
+        outlineOffset: 1,
+        cursor: onClick ? 'pointer' : 'inherit',
+        whiteSpace: 'nowrap',
       }}
       onClick={onClick}
     >
-      {overlay && label && <span className="mr-px">{label}</span>}
+      {overlay && label ? <span style={{ fontSize: '0.78em', marginRight: 1 }}>{label}</span> : null}
       {siHua}
     </span>
   );
@@ -106,50 +88,80 @@ const SiHuaBadge = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  selfSihuaMarks = [], incomingSihuaMarks = [], overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen,
+  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
+  const isSihuaMode = displayMode === 'sihua';
 
-  const majorStars = stars.filter(s => s.type === 'major');
-  const luckyStars = stars.filter(s => s.type === 'lucky');
-  const shaStars = stars.filter(s => s.type === 'sha');
-  const minorStars = stars.filter(s => s.type === 'minor');
-  const visibleMinorStars = displayMode === 'sanhe'
-    ? minorStars
-    : minorStars.filter(s => ['红鸾', '天喜', '天姚', '天刑'].includes(s.name));
-  const compactMode = displayMode !== 'sanhe';
-  const visibleLuckyStars = compactMode
-    ? luckyStars.filter(s => ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马'].includes(s.name))
-    : luckyStars;
-  const visibleShaStars = compactMode
-    ? shaStars.filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'].includes(s.name))
-    : shaStars;
-  // 根据宫格在 4×4 命盘中的实际位置决定箭头方向：
-  // 外箭头从盘心指向宫外；内箭头从宫外指向盘心。
-  // 箭头出现在哪颗星上，则由 ChartBoard 按本命宫干四化动态传入的 marks 决定。
-  const getArrowDirection = (outward: boolean): string => {
-    const [row, col] = ({
-      5: [1, 1], 6: [1, 2], 7: [1, 3], 8: [1, 4],
-      4: [2, 1], 9: [2, 4],
-      3: [3, 1], 10: [3, 4],
-      2: [4, 1], 1: [4, 2], 0: [4, 3], 11: [4, 4],
-    } as Record<number, [number, number]>)[branch] ?? [2, 2];
-    const direction = row === 1 ? '↑' : row === 4 ? '↓' : col === 1 ? '←' : col === 4 ? '→' : '↑';
-    if (outward) return direction;
-    return ({ '↑': '↓', '↓': '↑', '←': '→', '→': '←' } as Record<string, string>)[direction];
+  const byType = (t: Star['type']) => stars.filter(s => s.type === t);
+  const compact = displayMode !== 'sanhe';
+  const major = byType('major');
+  const lucky = compact
+    ? byType('lucky').filter(s => ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马'].includes(s.name))
+    : byType('lucky');
+  const sha = compact
+    ? byType('sha').filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'].includes(s.name))
+    : byType('sha');
+  const minor = compact
+    ? byType('minor').filter(s => ['红鸾', '天喜', '天姚', '天刑'].includes(s.name))
+    : byType('minor');
+  const ordered: Star[] = [...major, ...lucky, ...sha, ...minor];
+
+  const palaceName = name === '仆役' ? '交友' : name;
+  const palaceShort = (palaceName.endsWith('宫') && palaceName.length > 2 ? palaceName.slice(0, -1) : palaceName);
+  const [n1, n2] = twoChars(name);
+
+  const renderStar = (star: Star) => {
+    const overlaySiHua = overlayStarSiHua?.[star.name];
+    const isMajor = star.type === 'major';
+    const color = isSihuaMode && !isMajor ? '#111111' : KIND_COLOR[star.type];
+    return (
+      <div
+        key={star.name}
+        className="flex flex-col items-center"
+        style={{ gap: '0.8cqw', cursor: 'pointer' }}
+        onClick={e => { e.stopPropagation(); onStarClick?.(star); }}
+      >
+        <span
+          className={isMajor ? 'font-bold' : 'font-medium'}
+          style={{
+            ...(isMajor ? fs(9.6, 9) : fs(8.4, 8)),
+            writingMode: 'vertical-rl',
+            textOrientation: 'upright',
+            lineHeight: 1.08,
+            letterSpacing: '0.02em',
+            color,
+          }}
+        >
+          {star.name}
+        </span>
+        {!isSihuaMode && star.brightnessRaw && (
+          <span style={{ ...fs(5.8, 6), color, lineHeight: 1 }}>{star.brightnessRaw}</span>
+        )}
+        {star.siHua && (isSihuaMode
+          ? <span className="font-bold" style={{ ...fs(8, 8), color: LETTER_RED, lineHeight: 1 }}>{SIHUA_LETTER[star.siHua]}</span>
+          : <SiHuaSquare siHua={star.siHua} />)}
+        {overlaySiHua && (
+          <SiHuaSquare
+            siHua={overlaySiHua}
+            overlay
+            label={overlayLabel}
+            onClick={e => { e.stopPropagation(); onSiHuaClick?.(star.name, overlaySiHua); }}
+          />
+        )}
+      </div>
+    );
   };
-  const renderSihuaArrows = (starName: string) => (
-    <>
-      {selfSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <SihuaArrow key={'self-' + mark.siHua} direction={getArrowDirection(true)} color={SIHUA_COLORS[mark.siHua].color} />
-      ))}
-      {incomingSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <SihuaArrow key={'incoming-' + mark.siHua} direction={getArrowDirection(false)} color={SIHUA_COLORS[mark.siHua].color} />
-      ))}
-    </>
-  );
-  const siHuaLetters: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
+
+  const tagStyle: React.CSSProperties = {
+    ...fs(6.4, 7),
+    border: '1px solid',
+    borderRadius: '1.6cqw',
+    padding: '0.4cqw 1.6cqw',
+    lineHeight: 1.3,
+    whiteSpace: 'nowrap',
+  };
 
   return (
     <motion.div
@@ -157,16 +169,17 @@ export default function PalaceCell({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.35, delay, ease: 'easeOut' }}
       onClick={onClick}
-      className="pcell relative cursor-pointer transition-all duration-200 h-full [container-type:inline-size]"
+      className="pcell relative cursor-pointer transition-all duration-200 flex-1 [container-type:inline-size]"
       style={{
+        // 宫格做成正方形；星曜多时按内容撑高，不会被截断
+        aspectRatio: '1 / 1',
+        width: '100%',
         background: isCurrentDaXian
           ? 'rgba(147,51,234,0.08)'
           : isSelected
           ? 'rgba(37,99,235,0.18)'
           : isSanFang
           ? 'rgba(37,99,235,0.09)'
-          : isMingGong
-          ? 'rgba(212,168,67,0.04)'
           : '#ffffff',
         boxShadow: isCurrentDaXian
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
@@ -177,179 +190,84 @@ export default function PalaceCell({
           : 'none',
       }}
     >
-      <div
-        className="relative flex flex-col h-full"
-        style={{ padding: '4.5cqw 4cqw 4cqw', minHeight: '80cqw' }}
-      >
-        {/* 大限年龄 */}
-        {daXianAge && (
-          <div
-            className="absolute font-mono tabular-nums"
-            style={{
-              ...fs(10, 9),
-              top: '3cqw',
-              right: '3.5cqw',
-              color: isCurrentDaXian ? C.purple : C.label,
-            }}
-          >
-            {daXianAge[0]}–{daXianAge[1]}
+      <div className="relative flex flex-col" style={{ padding: '3cqw 3.5cqw 3cqw', gap: '2cqw', minHeight: '100%' }}>
+        {/* 左上角小标签：流年/大限宫名 */}
+        {overlayPalaceName ? (
+          <div>
+            <span style={{ ...tagStyle, color: displayMode === 'sanhe' ? '#7c3aed' : '#2563eb', borderColor: 'currentColor', background: 'rgba(124,58,237,0.06)' }}>
+              {overlayPalaceName}
+            </span>
           </div>
+        ) : (
+          <div style={{ height: '1.5cqw' }} />
         )}
 
-        {/* 宫名行 */}
-        <div
-          className="flex items-center mb-0.5"
-          style={{ gap: '1.5cqw', paddingRight: '28cqw' }}
-        >
-          <span
-            className="font-medium tracking-wide"
-            style={{
-              ...fs(11.5, 11),
-              color: isMingGong ? C.mingGong : isShenGong ? C.shenGong : C.label,
-            }}
-          >
-            {name === '仆役' ? '交友' : name}
-          </span>
-          {isMingGong && (
-            <span
-              className="border rounded leading-tight"
-              style={{ ...fs(8.5, 8), padding: '0 1cqw', color: C.mingGong, borderColor: C.mingGong }}
-            >命</span>
-          )}
-          {isShenGong && (
-            <span
-              className="border rounded leading-tight"
-              style={{ ...fs(8.5, 8), padding: '0 1cqw', color: C.shenGong, borderColor: C.shenGong }}
-            >身</span>
-          )}
+        {/* 星曜：竖排，一颗星一列 */}
+        <div className="flex flex-wrap" style={{ columnGap: '1cqw', rowGap: '3cqw', alignItems: 'flex-start' }}>
+          {ordered.map(renderStar)}
         </div>
 
-        {/* 干支 */}
-        <div
-          className="font-mono"
-          style={{ ...fs(10, 9), color: C.label, marginBottom: '1cqw' }}
-        >
-          {ganzhi}
-        </div>
-
-        {/* 主星 */}
-        <div className="flex flex-col flex-1" style={{ gap: '0.8cqw' }}>
-          {majorStars.map((star) => {
-            const overlaySiHua = overlayStarSiHua?.[star.name];
-            const starColor =
-              star.brightness === 'bright' ? C.starBright : star.brightness === 'dim' ? C.starDim : C.starNormal;
-            return (
+        {/* 底部 */}
+        {isSihuaMode ? (
+          <div className="mt-auto flex flex-col items-center" style={{ gap: '1cqw' }}>
+            {bottomInfo?.yearAge && (
+              <div className="tabular-nums" style={{ ...fs(6, 6.5), color: '#6b7280' }}>{bottomInfo.yearAge}</div>
+            )}
+            <div className="flex items-stretch w-full" style={{ gap: '0.8cqw' }}>
               <div
-                key={star.name}
-                className="flex items-center"
-                onClick={e => { e.stopPropagation(); onStarClick?.(star); }}
+                className="flex flex-col items-center justify-center font-medium"
+                style={{ ...fs(7.2, 7.5), width: '11cqw', border: '1px solid #9ca3af', lineHeight: 1.1, color: '#111', padding: '0.6cqw 0' }}
               >
-                <span
-                  className="leading-tight font-bold tracking-tight cursor-pointer hover:brightness-125 transition-all"
-                  style={{ ...fs(15, 12.5), color: displayMode === 'sihua' ? (star.siHua ? '#171717' : '#9ca3af') : overlaySiHua ? SIHUA_COLORS[overlaySiHua]?.color ?? starColor : starColor }}
-                >
-                  {star.name}
-                </span>
-                {displayMode === 'sanhe' && star.brightnessRaw && (
-                  <span
-                    className="font-medium"
-                    style={{ ...fs(9, 8.5), color: starColor, marginLeft: '0.8cqw' }}
-                  >
-                    {star.brightnessRaw}
+                <span>{STEMS[stem]}</span><span>{BRANCHES[branch]}</span>
+              </div>
+              <div
+                className="flex flex-col items-center justify-center flex-1"
+                style={{ border: '1px solid #9ca3af', color: '#111', lineHeight: 1.25, padding: '0.6cqw 0' }}
+              >
+                <span className="font-bold" style={{ ...fs(7.4, 7.5) }}>{bottomInfo?.daLabel ?? ''}</span>
+                {daXianAge && (
+                  <span className="tabular-nums" style={{ ...fs(6.6, 7), color: isCurrentDaXian ? '#7c3aed' : '#111' }}>
+                    {daXianAge[0]}~{daXianAge[1]}
                   </span>
                 )}
-                {renderSihuaArrows(star.name)}
-                {star.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[star.siHua]}</span> : <SiHuaBadge siHua={star.siHua} />)}
-                {overlaySiHua && (
-                  <SiHuaBadge
-                    siHua={overlaySiHua}
-                    overlay
-                    label={overlayLabel}
-                    onClick={e => {
-                      e.stopPropagation();
-                      onSiHuaClick?.(star.name, overlaySiHua);
-                    }}
-                  />
-                )}
               </div>
-            );
-          })}
-        </div>
-
-        {/* 吉星 */}
-        {visibleLuckyStars.length > 0 && (
-          <div className="flex flex-wrap" style={{ columnGap: '2cqw', marginTop: '1cqw' }}>
-            {visibleLuckyStars.map(s => {
-              const overlaySiHua = overlayStarSiHua?.[s.name];
-              return (
-                <span
-                  key={s.name}
-                  className="inline-flex items-center leading-tight"
-                  style={{ ...fs(10.5, 9.5), color: C.lucky }}
-                >
-                  <span style={{ color: displayMode === 'sihua' ? (s.siHua ? '#171717' : '#9ca3af') : overlaySiHua ? SIHUA_COLORS[overlaySiHua]?.color ?? C.lucky : C.lucky }}>{s.name}</span>
-                  {renderSihuaArrows(s.name)}
-                  {displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}
-                  {s.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[s.siHua]}</span> : <SiHuaBadge siHua={s.siHua} />)}
-                  {overlaySiHua && (
-                    <SiHuaBadge
-                      siHua={overlaySiHua}
-                      overlay
-                      label={overlayLabel}
-                      onClick={e => {
-                        e.stopPropagation();
-                        onSiHuaClick?.(s.name, overlaySiHua);
-                      }}
-                    />
-                  )}
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {/* 煞星 */}
-        {visibleShaStars.length > 0 && (
-          <div className="flex flex-wrap" style={{ columnGap: '2cqw' }}>
-            {visibleShaStars.map(s => (
-              <span key={s.name} className="leading-tight" style={{ ...fs(10.5, 9.5), color: C.sha }}>
-                {s.name}{renderSihuaArrows(s.name)}{displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}{s.siHua && <SiHuaBadge siHua={s.siHua} />}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* 杂曜 */}
-        {visibleMinorStars.length > 0 && (
-          <div className="flex flex-wrap" style={{ columnGap: '2cqw' }}>
-            {visibleMinorStars.map(s => (
-              <span
-                key={s.name}
-                className="leading-tight"
-                style={{ ...fs(10.5, 9.5), color: displayMode === 'sihua' ? (s.siHua ? '#171717' : '#9ca3af') : C.minor }}
+              <div
+                className="flex flex-col items-center justify-center font-medium"
+                style={{ ...fs(7.2, 7.5), width: '11cqw', border: '1px solid #9ca3af', lineHeight: 1.1, color: isMingGong ? '#9a2f22' : '#111', padding: '0.6cqw 0' }}
               >
-                {s.name}{renderSihuaArrows(s.name)}{displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}{s.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ color: '#dc2626' }}>{siHuaLetters[s.siHua]}</span> : <SiHuaBadge siHua={s.siHua} />)}
+                <span>{n1}</span><span>{n2}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-auto flex items-end justify-between" style={{ gap: '2cqw' }}>
+            <div className="flex flex-col leading-tight" style={{ ...fs(6.4, 7) }}>
+              {shierShen?.map((n, i) => (
+                <span key={i} style={{ color: i === 0 ? '#0d9488' : '#6b7280' }}>{n}</span>
+              ))}
+            </div>
+            <div className="flex flex-col items-end" style={{ gap: '0.8cqw' }}>
+              {daXianAge && (
+                <span className="tabular-nums" style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#7c3aed' : '#6b7280' }}>
+                  {daXianAge[0]}-{daXianAge[1]}
+                </span>
+              )}
+              <span className="font-medium" style={{ ...fs(8, 8), color: '#111' }}>{ganzhi}</span>
+              <span
+                className="font-medium"
+                style={{
+                  ...tagStyle,
+                  fontSize: 'max(8px, 7.4cqw)',
+                  color: '#9a2f22',
+                  borderColor: 'rgba(154,47,34,0.45)',
+                  background: 'rgba(154,47,34,0.08)',
+                }}
+              >
+                {palaceShort}{isMingGong ? ' · 命' : ''}{isShenGong ? ' · 身' : ''}
               </span>
-            ))}
+            </div>
           </div>
         )}
-      {(shierShen || overlayPalaceName) && (
-        <div className="mt-auto pt-1 flex items-end justify-between" style={{ gap: '2cqw' }}>
-          <div className="flex flex-col leading-tight" style={{ ...fs(8.5, 8) }}>
-            {shierShen?.map((n, i) => (
-              <span key={i} style={{ color: i === 0 ? '#0d9488' : 'var(--tx-2)' }}>{n}</span>
-            ))}
-          </div>
-          {overlayPalaceName && (
-            <div
-              className="text-right font-medium"
-              style={{ ...fs(9, 8), color: displayMode === 'sanhe' ? '#9333ea' : '#2563eb' }}
-            >
-              {overlayPalaceName}
-            </div>
-          )}
-        </div>
-      )}
       </div>
     </motion.div>
   );
