@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { getSiHuaByStem, getYearBranchIndex } from '@/lib/ziwei/sihua';
 import { BRANCHES, STEMS, PALACE_NAMES_ORDER } from '@/lib/ziwei/constants';
+import { calculateTrueSolarTime, formatTrueSolarClock, formatSignedMinutes, shiftGregorianDate } from '@/lib/ziwei/true-solar-time';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
 
@@ -57,6 +58,14 @@ const ANIMATION_ORDER = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4];
 const fs = (cqw: number, minPx: number): React.CSSProperties => ({
   fontSize: `max(${minPx}px, ${cqw}cqw)`,
 });
+
+const LUNAR_MONTH_NAMES = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
+const LUNAR_DAY_NAMES = [
+  '初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+  '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+  '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十',
+];
+const p2 = (n: number) => String(n).padStart(2, '0');
 
 export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
@@ -122,6 +131,23 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       if (palace) onPalaceSelect?.(palace);
     }
   };
+
+  // ── 中央信息区数据：钟表时间 / 真太阳时 / 农历 / 四柱 / 命主身主 ──
+  const orig = chart.birthInfo.origInput;
+  const longitude = chart.birthInfo.longitude;
+  const solar = orig && longitude !== undefined
+    ? calculateTrueSolarTime({
+        year: orig.year, month: orig.month, day: orig.day,
+        clockHour: orig.clockHour, clockMinute: orig.clockMinute,
+        longitude,
+      })
+    : null;
+  const solarDate = orig && solar ? shiftGregorianDate(orig, solar.dayOffset) : null;
+  const li = chart.lunarInfo;
+  const lunarText = `${STEMS[li.yearStem]}${BRANCHES[li.yearBranch]}年 ${li.isLeapMonth ? '闰' : ''}${LUNAR_MONTH_NAMES[(Math.abs(li.lunarMonth) - 1 + 12) % 12]}月${LUNAR_DAY_NAMES[(li.lunarDay - 1 + 30) % 30]}${orig ? ` ${BRANCHES[chart.birthInfo.hour]}时` : ''}`;
+  const pillarRows: { label: string; value: [string, string, string, string] }[] = [];
+  if (li.fourPillars) pillarRows.push({ label: '节气', value: li.fourPillars });
+  if (li.fourPillarsLunar) pillarRows.push({ label: '非节气', value: li.fourPillarsLunar });
 
   // 三方四正
   const sanFangBranches = displayMode === 'sanhe' && selectedBranch !== null ? getSanFangSiZheng(selectedBranch) : null;
@@ -201,27 +227,32 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         >
           <div
             className="flex flex-col items-center justify-center h-full"
-            style={{ padding: '4cqw', gap: '4cqw' }}
+            style={{ padding: '3cqw', gap: '2.5cqw' }}
           >
             <div
-              className="select-none leading-none"
-              style={{ ...fs(20, 36), color: 'var(--t-gold)', opacity: 0.15 }}
+              className="font-medium"
+              style={{ ...fs(6.5, 11), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
             >
-              ☯
+              紫微斗数
             </div>
 
-            <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '2cqw' }}>
-              <div
-                className="font-medium"
-                style={{ ...fs(6.5, 11), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
-              >
-                紫微斗数
+            {/* 命宫 / 身宫 / 五行局 / 命主 / 身主 */}
+            <div
+              className="text-center"
+              style={{ ...fs(5.6, 10), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.8cqw', lineHeight: 1.35 }}
+            >
+              <div>
+                命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span>
+                {' · '}身宫 <span className="font-medium" style={{ color: '#0284c7' }}>{BRANCHES[chart.shenGongBranch]}</span>
+                {' · '}<span className="font-medium" style={{ color: 'var(--t-gold)' }}>{chart.wuxingJuName}</span>
               </div>
-              <div style={{ ...fs(7.5, 12), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '1cqw' }}>
-                <div>命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span></div>
-                <div>身宫 <span className="font-medium" style={{ color: '#0284c7' }}>{BRANCHES[chart.shenGongBranch]}</span></div>
-                <div className="font-medium" style={{ ...fs(7, 12), color: 'var(--t-gold)' }}>{chart.wuxingJuName}</div>
-              </div>
+              {(chart.mingZhu || chart.shenZhu) && (
+                <div>
+                  命主 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{chart.mingZhu}</span>
+                  {' · '}身主 <span className="font-medium" style={{ color: '#0284c7' }}>{chart.shenZhu}</span>
+                  {chart.yinYangGender ? <>{' · '}{chart.yinYangGender}</> : null}
+                </div>
+              )}
             </div>
 
             {chart.currentDaXianIndex >= 0 && (() => {
@@ -230,23 +261,71 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 <div
                   className="text-center"
                   style={{
-                    padding: '2.5cqw 6cqw',
+                    padding: '1.5cqw 5cqw',
                     borderRadius: '3cqw',
                     border: '1px solid rgba(147,51,234,0.55)',
                     background: 'rgba(147,51,234,0.08)',
+                    ...fs(5.6, 10),
+                    color: '#9333ea',
                   }}
                 >
-                  <div style={{ ...fs(5.5, 10), color: '#9333ea', marginBottom: '0.8cqw', letterSpacing: '0.1em' }}>当前大限</div>
-                  <div className="font-medium tabular-nums" style={{ ...fs(8.5, 14), color: '#9333ea' }}>{dx.startAge}–{dx.endAge}岁</div>
-                  <div style={{ ...fs(6, 10), color: '#9333ea' }}>{dx.palaceName}</div>
+                  当前大限 <span className="font-medium tabular-nums">{dx.startAge}–{dx.endAge}岁</span> {dx.palaceName}
                 </div>
               );
             })()}
 
-            <div className="text-center font-mono" style={{ ...fs(6, 10), color: 'var(--tx-2)', lineHeight: 1.5 }}>
-              {chart.lunarInfo.lunarYear}·{chart.lunarInfo.isLeapMonth ? '闰' : ''}
-              {chart.lunarInfo.lunarMonth}·{chart.lunarInfo.lunarDay}
+            {/* 钟表时间 / 真太阳时 / 农历 */}
+            <div
+              className="text-center"
+              style={{ ...fs(5.2, 9.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.8cqw', lineHeight: 1.35 }}
+            >
+              {orig && (
+                <div>
+                  钟表时间 <span className="tabular-nums">{orig.year}-{p2(orig.month)}-{p2(orig.day)} {p2(orig.clockHour)}:{p2(orig.clockMinute)}</span>
+                </div>
+              )}
+              {solar && solar.corrected && solarDate && (
+                <div>
+                  真太阳时 <span className="tabular-nums font-medium" style={{ color: 'var(--t-gold)' }}>
+                    {solarDate.year}-{p2(solarDate.month)}-{p2(solarDate.day)} {formatTrueSolarClock(solar)}
+                  </span>
+                  <span style={{ color: 'var(--t-faint)' }}> ({formatSignedMinutes(solar.totalCorrectionMinutes)}分)</span>
+                </div>
+              )}
+              <div>
+                农历 <span className="font-medium">{lunarText}</span>
+              </div>
             </div>
+
+            {/* 四柱：节气 / 非节气 */}
+            {pillarRows.length > 0 && (
+              <div
+                style={{
+                  ...fs(5.2, 9.5),
+                  color: 'var(--tx-2)',
+                  display: 'grid',
+                  gridTemplateColumns: 'auto repeat(4, auto)',
+                  columnGap: '3cqw',
+                  rowGap: '0.8cqw',
+                  alignItems: 'center',
+                  justifyItems: 'center',
+                  lineHeight: 1.35,
+                }}
+              >
+                <span />
+                {['年', '月', '日', '时'].map(t => (
+                  <span key={t} style={{ color: 'var(--t-faint)' }}>{t}</span>
+                ))}
+                {pillarRows.map(row => (
+                  <Fragment key={row.label}>
+                    <span style={{ color: 'var(--t-faint)', justifySelf: 'end' }}>{row.label}</span>
+                    {row.value.map((gz, idx) => (
+                      <span key={idx} className="font-medium" style={{ color: 'var(--t-gold)' }}>{gz}</span>
+                    ))}
+                  </Fragment>
+                ))}
+              </div>
+            )}
           </div>
         </motion.div>
 
