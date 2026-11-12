@@ -45,6 +45,10 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
     m = solar.getMonth();
     d = solar.getDay();
   }
+  // 保存「用户实际填写的公历日期 + 钟表时间」，供命盘中间区域显示钟表时间、真太阳时（换日前的原始值）
+  const origY = y;
+  const origM = m;
+  const origD = d;
   let hour = 0;
 
   // 时辰、晚子时换日统一使用真太阳时：经度修正 + 均时差。
@@ -73,6 +77,15 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
     province: form.province || undefined,
     city: form.city || undefined,
     longitude: form.province ? form.longitude : undefined,
+    origInput: !form.unknownTime && origY > 0 && origM > 0 && origD > 0
+      ? {
+          year: origY,
+          month: origM,
+          day: origD,
+          clockHour: parseInt(form.clockHour) || 0,
+          clockMinute: parseInt(form.clockMinute) || 0,
+        }
+      : undefined,
   };
 }
 
