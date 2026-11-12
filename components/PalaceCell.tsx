@@ -167,7 +167,7 @@ export default function PalaceCell({
           ? 'rgba(37,99,235,0.09)'
           : isMingGong
           ? 'rgba(212,168,67,0.04)'
-          : 'var(--t-bg)',
+          : '#ffffff',
         boxShadow: isCurrentDaXian
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
           : isSelected
