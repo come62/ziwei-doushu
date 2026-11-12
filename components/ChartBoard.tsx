@@ -269,7 +269,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                     color: '#9333ea',
                   }}
                 >
-                  当前大限 <span className="font-medium tabular-nums">{dx.startAge}–{dx.endAge}岁</span> {dx.palaceName}
+                  当前大限 <span className="font-medium tabular-nums">{dx.startAge}–{dx.endAge}岁</span> {dx.palaceName === '仆役' ? '交友' : dx.palaceName}
                 </div>
               );
             })()}
@@ -289,7 +289,6 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                   真太阳时 <span className="tabular-nums font-medium" style={{ color: 'var(--t-gold)' }}>
                     {solarDate.year}-{p2(solarDate.month)}-{p2(solarDate.day)} {formatTrueSolarClock(solar)}
                   </span>
-                  <span style={{ color: 'var(--t-faint)' }}> ({formatSignedMinutes(solar.totalCorrectionMinutes)}分)</span>
                 </div>
               )}
               <div>
@@ -324,6 +323,13 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                     ))}
                   </Fragment>
                 ))}
+              </div>
+            )}
+
+            {/* 出生地 · 真太阳时校正 */}
+            {solar && solar.corrected && (
+              <div style={{ ...fs(4.6, 9), color: 'var(--t-faint)' }}>
+                {chart.birthInfo.city ? `${chart.birthInfo.city} · ` : ''}真太阳时{formatSignedMinutes(solar.totalCorrectionMinutes)}分
               </div>
             )}
           </div>
