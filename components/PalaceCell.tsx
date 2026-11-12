@@ -21,6 +21,8 @@ interface PalaceCellProps {
   overlayLabel?: string;
   /** 点击叠加四化 badge 回调 */
   onSiHuaClick?: (starName: string, siHua: string) => void;
+  /** 宫位底部三行十二神：[博士十二神, 将前十二神, 岁前十二神] */
+  shierShen?: string[];
 }
 
 /** 四化：文字、边框都是实色 */
@@ -101,7 +103,7 @@ const SiHuaBadge = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  selfSihuaMarks = [], incomingSihuaMarks = [], overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick,
+  selfSihuaMarks = [], incomingSihuaMarks = [], overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -324,12 +326,21 @@ export default function PalaceCell({
             ))}
           </div>
         )}
-      {overlayPalaceName && (
-        <div
-          className="mt-auto pt-1 text-right font-medium"
-          style={{ ...fs(9, 8), color: displayMode === 'sanhe' ? '#9333ea' : '#2563eb' }}
-        >
-          {overlayPalaceName}
+      {(shierShen || overlayPalaceName) && (
+        <div className="mt-auto pt-1 flex items-end justify-between" style={{ gap: '2cqw' }}>
+          <div className="flex flex-col leading-tight" style={{ ...fs(8.5, 8) }}>
+            {shierShen?.map((n, i) => (
+              <span key={i} style={{ color: i === 0 ? '#0d9488' : 'var(--tx-2)' }}>{n}</span>
+            ))}
+          </div>
+          {overlayPalaceName && (
+            <div
+              className="text-right font-medium"
+              style={{ ...fs(9, 8), color: displayMode === 'sanhe' ? '#9333ea' : '#2563eb' }}
+            >
+              {overlayPalaceName}
+            </div>
+          )}
         </div>
       )}
       </div>
