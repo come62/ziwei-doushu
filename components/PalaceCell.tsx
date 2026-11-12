@@ -246,6 +246,14 @@ export default function PalaceCell({
                 >
                   {star.name}
                 </span>
+                {displayMode === 'sanhe' && star.brightnessRaw && (
+                  <span
+                    className="font-medium"
+                    style={{ ...fs(9, 8.5), color: starColor, marginLeft: '0.8cqw' }}
+                  >
+                    {star.brightnessRaw}
+                  </span>
+                )}
                 {renderSihuaArrows(star.name)}
                 {star.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[star.siHua]}</span> : <SiHuaBadge siHua={star.siHua} />)}
                 {overlaySiHua && (
@@ -277,6 +285,7 @@ export default function PalaceCell({
                 >
                   <span style={{ color: displayMode === 'sihua' ? (s.siHua ? '#171717' : '#9ca3af') : overlaySiHua ? SIHUA_COLORS[overlaySiHua]?.color ?? C.lucky : C.lucky }}>{s.name}</span>
                   {renderSihuaArrows(s.name)}
+                  {displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}
                   {s.siHua && (displayMode === 'sihua' ? <span className="ml-1 font-bold" style={{ ...fs(9, 9), color: '#dc2626' }}>{siHuaLetters[s.siHua]}</span> : <SiHuaBadge siHua={s.siHua} />)}
                   {overlaySiHua && (
                     <SiHuaBadge
@@ -300,7 +309,7 @@ export default function PalaceCell({
           <div className="flex flex-wrap" style={{ columnGap: '2cqw' }}>
             {visibleShaStars.map(s => (
               <span key={s.name} className="leading-tight" style={{ ...fs(10.5, 9.5), color: C.sha }}>
-                {s.name}{renderSihuaArrows(s.name)}{s.siHua && <SiHuaBadge siHua={s.siHua} />}
+                {s.name}{renderSihuaArrows(s.name)}{displayMode === 'sanhe' && s.brightnessRaw ? `[${s.brightnessRaw}]` : ''}{s.siHua && <SiHuaBadge siHua={s.siHua} />}
               </span>
             ))}
           </div>
