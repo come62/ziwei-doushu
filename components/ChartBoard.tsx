@@ -69,6 +69,13 @@ const SIHUA_ARROW_COLORS: Record<string, string> = {
   '禄': '#059669', '权': '#9333ea', '科': '#2563eb', '忌': '#dc2626',
 };
 const OUTER_PAD = 18; // 盘外留白（px），给外箭头用
+const LABEL_PAD = 14; // 再往外一圈（px），给方位字用
+
+// 方位字：十二宫对应的方位，位置按 4x4 网格的百分比（上下边按横向、左右边按纵向）
+const DIRECTION_TOP: [string, number][] = [['正南方', 41.25], ['南偏西', 58.75]];       // 午、未
+const DIRECTION_BOTTOM: [string, number][] = [['北偏东', 41.25], ['正北方', 58.75]];    // 丑、子
+const DIRECTION_LEFT: [string, number][] = [['南偏东', 12.5], ['东偏南', 37.5], ['正东方', 62.5], ['东偏北', 87.5]];   // 巳、辰、卯、寅
+const DIRECTION_RIGHT: [string, number][] = [['西偏南', 12.5], ['正西方', 37.5], ['西偏北', 62.5], ['北偏西', 87.5]];  // 申、酉、戌、亥
 
 // 外箭头锚点（相对 4x4 网格的百分比）与朝外方向
 const OUTER_ARROW: Record<number, { at: [number, number]; dir: [number, number] }> = {
@@ -119,6 +126,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
   // 飞星模式不画四化箭头；其余模式画大箭头，宫内星名后的小箭头就不再重复画
   const showBigArrows = displayMode !== 'feixing';
+  const boardPad = (showBigArrows ? OUTER_PAD : 0) + LABEL_PAD;
 
   const palaceMap: Record<number, Palace> = {};
   chart.palaces.forEach(p => { palaceMap[p.branch] = p; });
@@ -234,7 +242,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       </motion.div>
 
       {/* 4x4 命盘网格（含 SVG 叠加层）；外圈留白用来画自化外箭头 */}
-      <div className="relative" style={{ padding: showBigArrows ? OUTER_PAD : 0 }}>
+      <div className="relative" style={{ padding: boardPad }}>
       <div
         className="grid rounded-2xl overflow-hidden relative"
         style={{
@@ -492,7 +500,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
       {/* 外箭头：自化 */}
       {showBigArrows && (
-        <div className="pointer-events-none absolute" style={{ inset: OUTER_PAD }}>
+        <div className="pointer-events-none absolute" style={{ inset: boardPad }}>
           <svg width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
             {chart.palaces.map(pl => {
               const cfg = OUTER_ARROW[pl.branch];
@@ -511,6 +519,22 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           </svg>
         </div>
       )}
+
+      {/* 方位字（和原版一致：午=正南、子=正北、卯=正东、酉=正西） */}
+      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 9, color: 'var(--t-faint)', letterSpacing: '0.05em' }}>
+        {DIRECTION_TOP.map(([t, x]) => (
+          <span key={t} className="absolute whitespace-nowrap" style={{ left: `${x}%`, top: -(boardPad - 2), transform: 'translateX(-50%)' }}>{t}</span>
+        ))}
+        {DIRECTION_BOTTOM.map(([t, x]) => (
+          <span key={t} className="absolute whitespace-nowrap" style={{ left: `${x}%`, bottom: -(boardPad - 2), transform: 'translateX(-50%)' }}>{t}</span>
+        ))}
+        {DIRECTION_LEFT.map(([t, y]) => (
+          <span key={t} className="absolute" style={{ top: `${y}%`, left: -(boardPad - 1), transform: 'translateY(-50%)', writingMode: 'vertical-rl', lineHeight: 1 }}>{t}</span>
+        ))}
+        {DIRECTION_RIGHT.map(([t, y]) => (
+          <span key={t} className="absolute" style={{ top: `${y}%`, right: -(boardPad - 1), transform: 'translateY(-50%)', writingMode: 'vertical-rl', lineHeight: 1 }}>{t}</span>
+        ))}
+      </div>
       </div>
 
       {/* 图例 */}
