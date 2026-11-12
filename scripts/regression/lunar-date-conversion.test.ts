@@ -57,7 +57,7 @@ assert.ok(
   chart.daXians.some(dx =>
     dx.startAge === 34 &&
     dx.endAge === 43 &&
-    dx.palaceName === '子女宫'
+    dx.palaceName === '子女'
   ),
   '34–43 岁大限应在子女宫',
 );
