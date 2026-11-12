@@ -186,6 +186,10 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     return { yearAge, daLabel: `大${short}` };
   };
 
+  // 来因宫：宫干 = 生年干的宫（若有两个，取从寅宫起算的第一个）
+  const laiYinBranch = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1]
+    .find(b => palaceMap[b]?.stem === chart.lunarInfo.yearStem);
+
   // 四化页的长箭头（和原版一致）：只画「对宫化入」——对宫宫干化出的星落在本宫，
   // 箭头从对宫穿过盘心指向本宫；自化的星由盘外短箭头表示。
   const sihuaLines: { from: number; to: number; siHua: string }[] = [];
@@ -312,6 +316,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
                 shierShen={timeView === 'mingpan' ? shierShenFor(branch) : undefined}
                 bottomInfo={displayMode === 'sihua' ? bottomInfoFor(branch) : undefined}
+                isLaiYin={branch === laiYinBranch}
               />
             </div>
           );
@@ -350,11 +355,11 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           )}
           <div
             className="flex flex-col items-center justify-center h-full"
-            style={{ padding: '2cqw', gap: '1.6cqw' }}
+            style={{ padding: '1.5cqw', gap: '1cqw' }}
           >
             <div
               className="font-medium"
-              style={{ ...fs(5.4, 10), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
+              style={{ ...fs(5, 9), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
             >
               紫微斗数
             </div>
@@ -362,7 +367,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             {/* 命宫 / 身宫 / 五行局 / 命主 / 身主 */}
             <div
               className="text-center"
-              style={{ ...fs(4.5, 9), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.6cqw', lineHeight: 1.3 }}
+              style={{ ...fs(4.4, 8), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.6cqw', lineHeight: 1.3 }}
             >
               <div>
                 命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span>
@@ -388,7 +393,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                     borderRadius: '3cqw',
                     border: '1px solid rgba(147,51,234,0.55)',
                     background: 'rgba(147,51,234,0.08)',
-                    ...fs(4.5, 9),
+                    ...fs(4.4, 8),
                     color: '#9333ea',
                   }}
                 >
@@ -397,10 +402,19 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
               );
             })()}
 
+            {displayMode === 'sihua' && (
+              <div className="text-center" style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)' }}>
+                四化{' '}
+                {([['A', '禄'], ['B', '权'], ['C', '科'], ['D', '忌']] as const).map(([l, h]) => (
+                  <span key={l} className="font-bold" style={{ color: LETTER_RED, marginLeft: '1.5cqw' }}>{l}{h}</span>
+                ))}
+              </div>
+            )}
+
             {/* 钟表时间 / 真太阳时 / 农历 */}
             <div
               className="text-center"
-              style={{ ...fs(4.2, 8.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.5cqw', lineHeight: 1.3 }}
+              style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.5cqw', lineHeight: 1.3 }}
             >
               {orig && (
                 <div>
@@ -423,7 +437,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             {pillarRows.length > 0 && (
               <div
                 style={{
-                  ...fs(4.2, 8.5),
+                  ...fs(4.2, 7.5),
                   color: 'var(--tx-2)',
                   display: 'grid',
                   gridTemplateColumns: 'auto repeat(4, auto)',
@@ -451,7 +465,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
             {/* 出生地 · 真太阳时校正 */}
             {solar && solar.corrected && (
-              <div style={{ ...fs(3.8, 8), color: 'var(--t-faint)' }}>
+              <div style={{ ...fs(3.8, 7), color: 'var(--t-faint)' }}>
                 {chart.birthInfo.city ? `${chart.birthInfo.city} · ` : ''}真太阳时{formatSignedMinutes(solar.totalCorrectionMinutes)}分
               </div>
             )}
@@ -471,18 +485,31 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
               </marker>
             </defs>
             {sihuaLines.map((ln, i) => {
+              // 线只画在中央 2×2 区域内（25%~75%）：宫心到宫心的连线，裁到中央区域边界，
+              // 箭头停在边界上，字母放在箭头旁边的中央区域里，不进宫格。
               const a = BRANCH_SVG_POS[ln.from], b = BRANCH_SVG_POS[ln.to];
-              const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
-              const ux = (b[0] - a[0]) / dist, uy = (b[1] - a[1]) / dist;
-              const edge = 9; // 离宫中心 9%（约宫格边缘）起笔/收笔
-              const [x1, y1] = [a[0] + ux * edge, a[1] + uy * edge];
-              const [x2, y2] = [b[0] - ux * edge, b[1] - uy * edge];
-              const [lx, ly] = [b[0] - ux * (edge - 3.2), b[1] - uy * (edge - 3.2)];
+              const dx = b[0] - a[0], dy = b[1] - a[1];
+              let t0 = 0, t1 = 1;
+              const clip = (p0: number, d: number) => {
+                if (Math.abs(d) < 1e-9) return;
+                const ta = (25 - p0) / d, tb = (75 - p0) / d;
+                const lo = Math.min(ta, tb), hi = Math.max(ta, tb);
+                t0 = Math.max(t0, lo); t1 = Math.min(t1, hi);
+              };
+              clip(a[0], dx); clip(a[1], dy);
+              if (t1 <= t0) return null;
+              const len = Math.hypot(dx, dy);
+              const ux = dx / len, uy = dy / len;
+              const [x1, y1] = [a[0] + dx * t0, a[1] + dy * t0];
+              const [x2, y2] = [a[0] + dx * t1, a[1] + dy * t1];
+              // 字母：箭头尖往盘心退 3.5%，再往侧面错开 2%
+              const [lx, ly] = [x2 - ux * 3.5 - uy * 2.2, y2 - uy * 3.5 + ux * 2.2];
               return (
                 <g key={`ln-${i}`}>
                   <line x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`}
-                    stroke={LETTER_RED} strokeWidth={1} markerEnd="url(#sihua-head)" opacity={0.8} />
-                  <text x={`${lx}%`} y={`${ly}%`} fill={LETTER_RED} fontSize={10} fontWeight={700}
+                    stroke={LETTER_RED} strokeWidth={1} markerEnd="url(#sihua-head)" opacity={0.85} />
+                  <text x={`${lx}%`} y={`${ly}%`} fill={LETTER_RED} fontSize={12} fontWeight={700}
+                    fontFamily="Georgia, 'Times New Roman', serif"
                     textAnchor="middle" dominantBaseline="central">{SIHUA_LETTER[ln.siHua]}</text>
                 </g>
               );

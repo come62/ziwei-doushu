@@ -26,6 +26,8 @@ interface PalaceCellProps {
   shierShen?: string[];
   /** 四化页底部小格：流年岁数（如「2025年43岁」）、大限宫名（如「大夫」） */
   bottomInfo?: { yearAge?: string; daLabel?: string };
+  /** 来因宫（四化页左上角小标签） */
+  isLaiYin?: boolean;
 }
 
 /** 四化：三合页用实色小方块（白字），四化页用红色字母 */
@@ -88,7 +90,7 @@ const SiHuaSquare = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo,
+  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -97,15 +99,14 @@ export default function PalaceCell({
   const byType = (t: Star['type']) => stars.filter(s => s.type === t);
   const compact = displayMode !== 'sanhe';
   const major = byType('major');
-  const lucky = compact
-    ? byType('lucky').filter(s => ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马'].includes(s.name))
-    : byType('lucky');
-  const sha = compact
-    ? byType('sha').filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'].includes(s.name))
-    : byType('sha');
-  const minor = compact
-    ? byType('minor').filter(s => ['红鸾', '天喜', '天姚', '天刑'].includes(s.name))
-    : byType('minor');
+  const LUCKY_KEEP = ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马', '天喜'];
+  const SHA_ORDER = ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'];
+  const MINOR_KEEP = ['红鸾', '天喜', '天姚', '天刑'];
+  const sortBy = (list: Star[], order: string[]) =>
+    [...list].sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
+  const lucky = compact ? byType('lucky').filter(s => LUCKY_KEEP.includes(s.name)) : byType('lucky');
+  const sha = compact ? sortBy(byType('sha').filter(s => SHA_ORDER.includes(s.name)), SHA_ORDER) : byType('sha');
+  const minor = compact ? byType('minor').filter(s => MINOR_KEEP.includes(s.name)) : byType('minor');
   const ordered: Star[] = [...major, ...lucky, ...sha, ...minor];
 
   const palaceName = name === '仆役' ? '交友' : name;
@@ -174,14 +175,14 @@ export default function PalaceCell({
         // 宫格做成正方形；星曜多时按内容撑高，不会被截断
         aspectRatio: '1 / 1',
         width: '100%',
-        background: isCurrentDaXian
+        background: isCurrentDaXian && !isSihuaMode
           ? 'rgba(147,51,234,0.08)'
           : isSelected
           ? 'rgba(37,99,235,0.18)'
           : isSanFang
           ? 'rgba(37,99,235,0.09)'
           : '#ffffff',
-        boxShadow: isCurrentDaXian
+        boxShadow: isCurrentDaXian && !isSihuaMode
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
           : isSelected
           ? 'inset 0 0 0 1.5px rgba(37,99,235,0.7)'
@@ -192,7 +193,11 @@ export default function PalaceCell({
     >
       <div className="relative flex flex-col" style={{ padding: '3cqw 3.5cqw 3cqw', gap: '2cqw', minHeight: '100%' }}>
         {/* 左上角小标签：流年/大限宫名 */}
-        {overlayPalaceName ? (
+        {isSihuaMode && isLaiYin ? (
+          <div>
+            <span style={{ ...tagStyle, color: '#9a2f22', borderColor: 'currentColor', background: 'rgba(154,47,34,0.06)' }}>来因</span>
+          </div>
+        ) : overlayPalaceName ? (
           <div>
             <span style={{ ...tagStyle, color: displayMode === 'sanhe' ? '#7c3aed' : '#2563eb', borderColor: 'currentColor', background: 'rgba(124,58,237,0.06)' }}>
               {overlayPalaceName}
@@ -226,7 +231,10 @@ export default function PalaceCell({
               >
                 <span className="font-bold" style={{ ...fs(7.4, 7.5) }}>{bottomInfo?.daLabel ?? ''}</span>
                 {daXianAge && (
-                  <span className="tabular-nums" style={{ ...fs(6.6, 7), color: isCurrentDaXian ? '#7c3aed' : '#111' }}>
+                  <span
+                    className="tabular-nums"
+                    style={{ ...fs(6.6, 7), color: isCurrentDaXian ? '#c2410c' : '#111', fontStyle: isCurrentDaXian ? 'italic' : 'normal', textDecoration: isCurrentDaXian ? 'underline' : 'none' }}
+                  >
                     {daXianAge[0]}~{daXianAge[1]}
                   </span>
                 )}
