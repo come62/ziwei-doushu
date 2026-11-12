@@ -186,11 +186,10 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         className="grid rounded-2xl overflow-hidden relative"
         style={{
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
-          aspectRatio: '1 / 1',
+          gridTemplateRows: 'repeat(4, auto)',
           gap: '1px',
-          background: '#cbd0d8',
-          border: '1px solid #cbd0d8',
+          background: '#d1d5db',
+          border: '1px solid #d1d5db',
           boxSizing: 'border-box',
         }}
       >
@@ -199,7 +198,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           const palace = palaceMap[branch];
           if (!palace) return null;
           return (
-            <div key={branch} style={{ gridRow: row, gridColumn: col, background: 'var(--t-bg)' }}>
+            <div key={branch} style={{ gridRow: row, gridColumn: col, background: '#ffffff' }}>
               <PalaceCell
                 palace={palace}
                 onClick={() => handlePalaceClick(branch)}
@@ -226,7 +225,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
           className="[container-type:inline-size]"
-          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: 'var(--t-bg)' }}
+          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: '#ffffff' }}
         >
           <div
             className="flex flex-col items-center justify-center h-full"
