@@ -125,23 +125,27 @@ export default function PalaceCell({
   const visibleShaStars = compactMode
     ? shaStars.filter(s => ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'].includes(s.name))
     : shaStars;
-  const outwardArrow: Record<number, string> = {
-    5: '↑', 6: '↑', 7: '↑', 8: '↑',
-    4: '←', 3: '←', 9: '→', 10: '→',
-    2: '↓', 1: '↓', 0: '↓', 11: '↓',
-  };
-  const inwardArrow: Record<number, string> = {
-    5: '↓', 6: '↓', 7: '↓', 8: '↓',
-    4: '→', 3: '→', 9: '←', 10: '←',
-    2: '↑', 1: '↑', 0: '↑', 11: '↑',
+  // 根据宫格在 4×4 命盘中的实际位置决定箭头方向：
+  // 外箭头从盘心指向宫外；内箭头从宫外指向盘心。
+  // 箭头出现在哪颗星上，则由 ChartBoard 按本命宫干四化动态传入的 marks 决定。
+  const getArrowDirection = (outward: boolean): string => {
+    const [row, col] = ({
+      5: [1, 1], 6: [1, 2], 7: [1, 3], 8: [1, 4],
+      4: [2, 1], 9: [2, 4],
+      3: [3, 1], 10: [3, 4],
+      2: [4, 1], 1: [4, 2], 0: [4, 3], 11: [4, 4],
+    } as Record<number, [number, number]>)[branch] ?? [2, 2];
+    const direction = row === 1 ? '↑' : row === 4 ? '↓' : col === 1 ? '←' : col === 4 ? '→' : '↑';
+    if (outward) return direction;
+    return ({ '↑': '↓', '↓': '↑', '←': '→', '→': '←' } as Record<string, string>)[direction];
   };
   const renderSihuaArrows = (starName: string) => (
     <>
       {selfSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <SihuaArrow key={'self-' + mark.siHua} direction={outwardArrow[branch]} color={SIHUA_COLORS[mark.siHua].color} />
+        <SihuaArrow key={'self-' + mark.siHua} direction={getArrowDirection(true)} color={SIHUA_COLORS[mark.siHua].color} />
       ))}
       {incomingSihuaMarks.filter(mark => mark.starName === starName).map(mark => (
-        <SihuaArrow key={'incoming-' + mark.siHua} direction={inwardArrow[branch]} color={SIHUA_COLORS[mark.siHua].color} />
+        <SihuaArrow key={'incoming-' + mark.siHua} direction={getArrowDirection(false)} color={SIHUA_COLORS[mark.siHua].color} />
       ))}
     </>
   );
