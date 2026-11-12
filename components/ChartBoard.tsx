@@ -69,7 +69,7 @@ const SIHUA_ARROW_COLORS: Record<string, string> = {
   '禄': '#059669', '权': '#9333ea', '科': '#2563eb', '忌': '#dc2626',
 };
 const OUTER_PAD = 18; // 盘外留白（px），给外箭头用
-const LABEL_PAD = 14; // 再往外一圈（px），给方位字用
+const LABEL_PAD = 24; // 再往外一圈（px），给方位字用
 
 // 方位字：十二宫对应的方位，位置按 4x4 网格的百分比（上下边按横向、左右边按纵向）
 const DIRECTION_TOP: [string, number][] = [['正南方', 41.25], ['南偏西', 58.75]];       // 午、未
@@ -521,7 +521,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       )}
 
       {/* 方位字（和原版一致：午=正南、子=正北、卯=正东、酉=正西） */}
-      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 9, color: 'var(--t-faint)', letterSpacing: '0.05em' }}>
+      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 13, fontWeight: 500, color: 'var(--tx-2)', letterSpacing: '0.08em' }}>
         {DIRECTION_TOP.map(([t, x]) => (
           <span key={t} className="absolute whitespace-nowrap" style={{ left: `${x}%`, top: -(boardPad - 2), transform: 'translateX(-50%)' }}>{t}</span>
         ))}
