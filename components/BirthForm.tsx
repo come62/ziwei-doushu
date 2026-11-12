@@ -89,12 +89,41 @@ export default function BirthForm({ onSubmit, loading, initialData, onFormSave, 
 
   const branch = useMemo(() => {
     if (form.unknownTime) return 0;
+    let year = parseInt(form.year) || 0;
+    let month = parseInt(form.month) || 0;
+    const day = parseInt(form.day) || 0;
+    if (form.calendarType === 'lunar' && year > 0 && month > 0 && day > 0) {
+      try {
+        const lunarMonth = form.isLeapMonth ? -month : month;
+        const solar = Lunar.fromYmd(year, lunarMonth, day).getSolar();
+        year = solar.getYear();
+        month = solar.getMonth();
+        const solarDay = solar.getDay();
+        return calcTrueSolarBranch(
+          parseInt(form.clockHour) || 0,
+          parseInt(form.clockMinute) || 0,
+          form.province ? form.longitude : undefined,
+          year,
+          month,
+          solarDay,
+        );
+      } catch {
+        return calcTrueSolarBranch(
+          parseInt(form.clockHour) || 0,
+          parseInt(form.clockMinute) || 0,
+          form.province ? form.longitude : undefined,
+        );
+      }
+    }
     return calcTrueSolarBranch(
       parseInt(form.clockHour) || 0,
       parseInt(form.clockMinute) || 0,
-      form.longitude,
+      form.province ? form.longitude : undefined,
+      year,
+      month,
+      day,
     );
-  }, [form.clockHour, form.clockMinute, form.longitude, form.unknownTime]);
+  }, [form.clockHour, form.clockMinute, form.longitude, form.province, form.unknownTime, form.year, form.month, form.day, form.calendarType, form.isLeapMonth]);
 
   const offsetMin = Math.round((form.longitude - 120) * 4);
   const shichenInfo = SHICHEN[branch];
