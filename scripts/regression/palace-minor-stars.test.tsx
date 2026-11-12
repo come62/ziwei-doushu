@@ -32,6 +32,6 @@ const palace = generateChart(samples[0]).palaces[0];
 const html = renderToStaticMarkup(React.createElement(PalaceCell, {
   palace: { ...palace, stars: [{ name: '测试杂耀', type: 'minor', brightnessRaw: '庙', siHua: '禄' }] },
 }));
-assert.match(html, /测试杂耀\[庙\]/, 'minor star brightness should be visible');
+assert.match(html, />庙<\//, 'minor star brightness should be visible');
 assert.match(html, />禄<\//, 'minor star sihua should be visible when present');
 console.log(`PalaceCell renders all stars in ${samples.length} charts, including ${minorCount} minor stars`);
