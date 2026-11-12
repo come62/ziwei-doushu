@@ -81,14 +81,17 @@ const SiHuaBadge = ({
   return (
     <span
       className={clsx(
-        'inline-flex items-center rounded-full border leading-none font-bold flex-shrink-0',
+        'inline-flex items-center justify-center rounded-sm border leading-none font-bold flex-shrink-0',
         overlay && 'border-dashed',
         onClick && 'cursor-pointer',
       )}
       style={{
         ...fs(9, 9),
-        padding: '0.8cqw 1.8cqw',
+        minWidth: '4.2cqw',
+        minHeight: '4.2cqw',
+        padding: '0.45cqw 0.7cqw',
         marginLeft: '1.5cqw',
+        borderWidth: '1px',
         color: c?.color,
         background: c?.bg,
         borderColor: c?.color,
