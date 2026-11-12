@@ -199,7 +199,7 @@ export default function PalaceCell({
               color: isMingGong ? C.mingGong : isShenGong ? C.shenGong : C.label,
             }}
           >
-            {name}
+            {name === '仆役' ? '交友' : name}
           </span>
           {isMingGong && (
             <span
@@ -225,11 +225,6 @@ export default function PalaceCell({
 
         {/* 主星 */}
         <div className="flex flex-col flex-1" style={{ gap: '0.8cqw' }}>
-          {majorStars.length === 0 && (
-            <span className="italic" style={{ ...fs(11, 10), color: C.minor }}>
-              空宫
-            </span>
-          )}
           {majorStars.map((star) => {
             const overlaySiHua = overlayStarSiHua?.[star.name];
             const starColor =
