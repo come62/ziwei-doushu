@@ -183,14 +183,14 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
 
       {/* 4x4 命盘网格（含 SVG 叠加层） */}
       <div
-        className="grid overflow-hidden relative"
+        className="grid rounded-2xl overflow-hidden relative"
         style={{
           gridTemplateColumns: 'repeat(4, 1fr)',
           gridTemplateRows: 'repeat(4, minmax(0, 1fr))',
           aspectRatio: '1 / 1',
           gap: '1px',
-          background: 'var(--t-border)',
-          border: '1px solid var(--t-border)',
+          background: '#cbd0d8',
+          border: '1px solid #cbd0d8',
           boxSizing: 'border-box',
         }}
       >
