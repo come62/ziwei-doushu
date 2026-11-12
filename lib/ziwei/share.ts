@@ -49,7 +49,7 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
 
   // 时辰、晚子时换日统一使用真太阳时：经度修正 + 均时差。
   if (!form.unknownTime && y > 0 && m > 0 && d > 0) {
-    const hasBirthplace = Number.isFinite(form.longitude);
+    const hasBirthplace = !!form.province && Number.isFinite(form.longitude);
     const solar = calculateTrueSolarTime({
       year: y,
       month: m,
