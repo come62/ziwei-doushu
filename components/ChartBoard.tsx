@@ -124,8 +124,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
   const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('sanhe');
   const [liunianYear, setLiunianYear] = useState<number>(new Date().getFullYear());
 
-  // 飞星模式不画四化箭头；其余模式画大箭头，宫内星名后的小箭头就不再重复画
-  const showBigArrows = displayMode !== 'feixing';
+  // 所有模式（含飞星）都画四化大箭头，宫内星名后的小箭头就不再重复画
+  const showBigArrows = true;
   const boardPad = (showBigArrows ? OUTER_PAD : 0) + LABEL_PAD;
 
   const palaceMap: Record<number, Palace> = {};
@@ -553,7 +553,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           <span key={h} className={`border px-1.5 py-0.5 rounded-full font-medium ${c}`}>{h}</span>
         ))}
         <span className="px-1.5 py-0.5 rounded-full" style={{ color: 'var(--t-faint)', border: '1px solid var(--t-border)' }}>
-          {displayMode === 'sanhe' ? '点击宫位看三方四正 · 外箭头自化 · 内箭头对宫化入' : displayMode === 'feixing' ? '点击宫位查看该宫宫干飞化' : 'A禄 · B权 · C科 · D忌 · 外箭头自化 · 内箭头对宫化入'}
+          {displayMode === 'sanhe' ? '点击宫位看三方四正 · 外箭头自化 · 内箭头对宫化入' : displayMode === 'feixing' ? '点击宫位查看该宫宫干飞化 · 外箭头自化 · 内箭头对宫化入' : 'A禄 · B权 · C科 · D忌 · 外箭头自化 · 内箭头对宫化入'}
         </span>
       </motion.div>
     </div>
