@@ -137,7 +137,7 @@ export default function PalaceCell({
         >
           {star.name}
         </span>
-        {!isSihuaMode && star.brightnessRaw && (
+        {displayMode === 'sanhe' && star.brightnessRaw && (
           <span style={{ ...fs(5.8, 6), color, lineHeight: 1 }}>{star.brightnessRaw}</span>
         )}
         {star.siHua && (isSihuaMode
@@ -263,26 +263,49 @@ export default function PalaceCell({
                 <span key={i} style={{ color: i === 0 ? '#0d9488' : '#6b7280' }}>{n}</span>
               ))}
             </div>
-            <div className="flex flex-col items-end" style={{ gap: '0.8cqw' }}>
-              {daXianAge && (
-                <span className="tabular-nums" style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#7c3aed' : '#6b7280' }}>
-                  {daXianAge[0]}-{daXianAge[1]}
+            {displayMode === 'feixing' ? (
+              <>
+                {/* 飞星页：底部中间 = 大限岁数 + 宫名；右下角 = 干支竖排 */}
+                <div className="flex flex-col items-center flex-1" style={{ gap: '0.8cqw' }}>
+                  {daXianAge && (
+                    <span
+                      className="tabular-nums"
+                      style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#c2410c' : '#6b7280', fontStyle: isCurrentDaXian ? 'italic' : 'normal', textDecoration: isCurrentDaXian ? 'underline' : 'none' }}
+                    >
+                      {daXianAge[0]}~{daXianAge[1]}
+                    </span>
+                  )}
+                  <span className="font-bold" style={{ ...fs(9, 9), color: '#1f2937', whiteSpace: 'nowrap' }}>{palaceShort}</span>
+                </div>
+                <span
+                  className="font-bold"
+                  style={{ ...fs(8.5, 9), color: '#111', writingMode: 'vertical-rl', textOrientation: 'upright', lineHeight: 1.1 }}
+                >
+                  {ganzhi}
                 </span>
-              )}
-              <span className="font-medium" style={{ ...fs(8, 8), color: '#111' }}>{ganzhi}</span>
-              <span
-                className="font-medium"
-                style={{
-                  ...tagStyle,
-                  fontSize: 'max(8px, 7.4cqw)',
-                  color: '#9a2f22',
-                  borderColor: 'rgba(154,47,34,0.45)',
-                  background: 'rgba(154,47,34,0.08)',
-                }}
-              >
-                {palaceShort}{isMingGong ? ' · 命' : ''}{isShenGong ? ' · 身' : ''}
-              </span>
-            </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-end" style={{ gap: '0.8cqw' }}>
+                {daXianAge && (
+                  <span className="tabular-nums" style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#7c3aed' : '#6b7280' }}>
+                    {daXianAge[0]}-{daXianAge[1]}
+                  </span>
+                )}
+                <span className="font-medium" style={{ ...fs(8, 8), color: '#111' }}>{ganzhi}</span>
+                <span
+                  className="font-medium"
+                  style={{
+                    ...tagStyle,
+                    fontSize: 'max(8px, 7.4cqw)',
+                    color: '#9a2f22',
+                    borderColor: 'rgba(154,47,34,0.45)',
+                    background: 'rgba(154,47,34,0.08)',
+                  }}
+                >
+                  {palaceShort}{isMingGong ? ' · 命' : ''}{isShenGong ? ' · 身' : ''}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
