@@ -1,6 +1,6 @@
 import type { BirthFormState } from '@/components/BirthForm';
 import type { BirthInfo } from './types';
-import { branchFromSolarMinutes, resolveZiweiDayOffset, shiftGregorianDate } from './true-solar-time';
+import { calculateTrueSolarTime, branchFromSolarMinutes, resolveZiweiDayOffset, shiftGregorianDate } from './true-solar-time';
 // @ts-ignore lunar-javascript runtime API has no complete upstream TS declarations
 import { Lunar } from 'lunar-javascript';
 
@@ -8,13 +8,23 @@ function isValidLongitude(longitude: number): boolean {
   return longitude >= -180 && longitude <= 180;
 }
 
-/** 根据北京时间 + 经度计算真太阳时时辰支 (0-11) */
-export function calcTrueSolarBranch(clockHour: number, clockMinute: number, longitude: number): number {
+/** 根据出生日期、北京时间和出生地经度计算真太阳时时辰支 (0-11)，包含均时差。 */
+export function calcTrueSolarBranch(
+  clockHour: number,
+  clockMinute: number,
+  longitude?: number,
+  year?: number,
+  month?: number,
+  day?: number,
+): number {
+  if (longitude !== undefined && year !== undefined && month !== undefined && day !== undefined) {
+    return calculateTrueSolarTime({
+      year, month, day, clockHour, clockMinute, longitude,
+    }).branch;
+  }
   const clockMins = clockHour * 60 + clockMinute;
-  const offset = (longitude - 120) * 4;
-  const solar = ((clockMins + offset) % 1440 + 1440) % 1440;
-  if (solar >= 1380 || solar < 60) return 0;
-  return Math.floor((solar - 60) / 120) + 1;
+  const offset = longitude === undefined ? 0 : (longitude - 120) * 4;
+  return branchFromSolarMinutes(((clockMins + offset) % 1440 + 1440) % 1440);
 }
 
 /** BirthFormState → BirthInfo
@@ -37,14 +47,20 @@ export function formToBirthInfo(form: BirthFormState): BirthInfo {
   }
   let hour = 0;
 
-  // 晚子时换日按真太阳时判定，与时辰支同一口径（见 true-solar-time.ts 的 resolveZiweiDayOffset）。
-  // 只看钟表 23 点会和经度校正后的时辰错位：东经 100° 钟表 23:30 是真太阳时 22:10 亥时，不该换日。
-  if (!form.unknownTime) {
-    const solar = (parseInt(form.clockHour) || 0) * 60 + (parseInt(form.clockMinute) || 0) + (form.longitude - 120) * 4;
-    const normalizedMinutes = ((solar % 1440) + 1440) % 1440;
-    hour = branchFromSolarMinutes(normalizedMinutes);
-    const dayOffset = resolveZiweiDayOffset({ dayOffset: Math.floor(solar / 1440), normalizedMinutes, branch: hour });
-    if (dayOffset !== 0 && y > 0 && m > 0 && d > 0) {
+  // 时辰、晚子时换日统一使用真太阳时：经度修正 + 均时差。
+  if (!form.unknownTime && y > 0 && m > 0 && d > 0) {
+    const hasBirthplace = Number.isFinite(form.longitude);
+    const solar = calculateTrueSolarTime({
+      year: y,
+      month: m,
+      day: d,
+      clockHour: parseInt(form.clockHour) || 0,
+      clockMinute: parseInt(form.clockMinute) || 0,
+      longitude: hasBirthplace ? form.longitude : undefined,
+    });
+    hour = solar.branch;
+    const dayOffset = resolveZiweiDayOffset(solar);
+    if (dayOffset !== 0) {
       ({ year: y, month: m, day: d } = shiftGregorianDate({ year: y, month: m, day: d }, dayOffset));
     }
   }
