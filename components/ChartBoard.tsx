@@ -5,6 +5,7 @@ import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types'
 import { getSiHuaByStem, getYearBranchIndex } from '@/lib/ziwei/sihua';
 import { BRANCHES, STEMS, PALACE_NAMES_ORDER } from '@/lib/ziwei/constants';
 import { calculateTrueSolarTime, formatTrueSolarClock, formatSignedMinutes, shiftGregorianDate } from '@/lib/ziwei/true-solar-time';
+import { boshiShenName, jiangQianShenName, suiQianShenName } from '@/lib/ziwei/shier-shen';
 import PalaceCell from './PalaceCell';
 import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
 
@@ -59,12 +60,6 @@ const fs = (cqw: number, minPx: number): React.CSSProperties => ({
   fontSize: `max(${minPx}px, ${cqw}cqw)`,
 });
 
-const LUNAR_MONTH_NAMES = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
-const LUNAR_DAY_NAMES = [
-  '初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
-  '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-  '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十',
-];
 const p2 = (n: number) => String(n).padStart(2, '0');
 
 export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
@@ -144,7 +139,13 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     : null;
   const solarDate = orig && solar ? shiftGregorianDate(orig, solar.dayOffset) : null;
   const li = chart.lunarInfo;
-  const lunarText = `${STEMS[li.yearStem]}${BRANCHES[li.yearBranch]}年 ${li.isLeapMonth ? '闰' : ''}${LUNAR_MONTH_NAMES[(Math.abs(li.lunarMonth) - 1 + 12) % 12]}月${LUNAR_DAY_NAMES[(li.lunarDay - 1 + 30) % 30]}${orig ? ` ${BRANCHES[chart.birthInfo.hour]}时` : ''}`;
+  const lunarText = `${STEMS[li.yearStem]}${BRANCHES[li.yearBranch]}${li.isLeapMonth ? '闰' : ''}${Math.abs(li.lunarMonth)}月${li.lunarDay}日`;
+  // 宫位底部十二神：博士（生年禄存起）/ 将前 / 岁前（本命态都按生年支起）
+  const shierShenFor = (branch: number): string[] => [
+    boshiShenName(li.yearStem, chart.birthInfo.gender, branch),
+    jiangQianShenName(li.yearBranch, branch),
+    suiQianShenName(li.yearBranch, branch),
+  ];
   const pillarRows: { label: string; value: [string, string, string, string] }[] = [];
   if (li.fourPillars) pillarRows.push({ label: '节气', value: li.fourPillars });
   if (li.fourPillarsLunar) pillarRows.push({ label: '非节气', value: li.fourPillarsLunar });
@@ -212,6 +213,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
+                shierShen={timeView === 'mingpan' ? shierShenFor(branch) : undefined}
               />
             </div>
           );
