@@ -175,14 +175,14 @@ export default function PalaceCell({
         // 宫格做成正方形；星曜多时按内容撑高，不会被截断
         aspectRatio: '1 / 1',
         width: '100%',
-        background: isCurrentDaXian && !isSihuaMode
+        background: isCurrentDaXian && displayMode === 'sanhe'
           ? 'rgba(147,51,234,0.08)'
           : isSelected
           ? 'rgba(37,99,235,0.18)'
           : isSanFang
           ? 'rgba(37,99,235,0.09)'
           : '#ffffff',
-        boxShadow: isCurrentDaXian && !isSihuaMode
+        boxShadow: isCurrentDaXian && displayMode === 'sanhe'
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
           : isSelected
           ? 'inset 0 0 0 1.5px rgba(37,99,235,0.7)'
@@ -249,8 +249,17 @@ export default function PalaceCell({
           </div>
         ) : (
           <div className="mt-auto flex items-end justify-between" style={{ gap: '2cqw' }}>
-            <div className="flex flex-col leading-tight" style={{ ...fs(6.4, 7) }}>
-              {shierShen?.map((n, i) => (
+            <div className="flex flex-col leading-tight" style={{ ...fs(6.4, 7), color: '#6b7280' }}>
+              {displayMode === 'feixing' ? (() => {
+                const m = bottomInfo?.yearAge?.match(/(\d+)年(\d+)岁/);
+                return (
+                  <>
+                    {m && <span>{m[2]}岁</span>}
+                    {m && <span>{m[1]}</span>}
+                    <span>{bottomInfo?.daLabel}</span>
+                  </>
+                );
+              })() : shierShen?.map((n, i) => (
                 <span key={i} style={{ color: i === 0 ? '#0d9488' : '#6b7280' }}>{n}</span>
               ))}
             </div>

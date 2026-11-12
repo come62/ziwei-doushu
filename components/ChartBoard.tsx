@@ -314,8 +314,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
-                shierShen={timeView === 'mingpan' ? shierShenFor(branch) : undefined}
-                bottomInfo={displayMode === 'sihua' ? bottomInfoFor(branch) : undefined}
+                shierShen={displayMode === 'sanhe' && timeView === 'mingpan' ? shierShenFor(branch) : undefined}
+                bottomInfo={displayMode !== 'sanhe' ? bottomInfoFor(branch) : undefined}
                 isLaiYin={branch === laiYinBranch}
               />
             </div>
