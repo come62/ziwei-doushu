@@ -62,11 +62,63 @@ const fs = (cqw: number, minPx: number): React.CSSProperties => ({
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 
+// ── 四化箭头（和原版一致）──────────────────────────────────────────
+// 外箭头 = 自化：宫干化出的星就在本宫，箭头画在盘外，朝外。
+// 内箭头 = 对宫化入：对宫宫干化出的星在本宫，箭头画在【对宫】靠中央的一侧，指向本宫。
+const SIHUA_ARROW_COLORS: Record<string, string> = {
+  '禄': '#059669', '权': '#9333ea', '科': '#2563eb', '忌': '#dc2626',
+};
+const OUTER_PAD = 18; // 盘外留白（px），给外箭头用
+
+// 外箭头锚点（相对 4x4 网格的百分比）与朝外方向
+const OUTER_ARROW: Record<number, { at: [number, number]; dir: [number, number] }> = {
+  5: { at: [0, 0], dir: [-1, -1] }, 6: { at: [37.5, 0], dir: [0, -1] },
+  7: { at: [62.5, 0], dir: [0, -1] }, 8: { at: [100, 0], dir: [1, -1] },
+  9: { at: [100, 37.5], dir: [1, 0] }, 10: { at: [100, 62.5], dir: [1, 0] },
+  11: { at: [100, 100], dir: [1, 1] }, 0: { at: [62.5, 100], dir: [0, 1] },
+  1: { at: [37.5, 100], dir: [0, 1] }, 2: { at: [0, 100], dir: [-1, 1] },
+  3: { at: [0, 62.5], dir: [-1, 0] }, 4: { at: [0, 37.5], dir: [-1, 0] },
+};
+// 内箭头锚点（相对中央信息区的百分比）与指向对宫的方向
+const INNER_ARROW: Record<number, { at: [number, number]; dir: [number, number] }> = {
+  5: { at: [0, 0], dir: [1, 1] }, 6: { at: [25, 0], dir: [0, 1] },
+  7: { at: [75, 0], dir: [0, 1] }, 8: { at: [100, 0], dir: [-1, 1] },
+  9: { at: [100, 25], dir: [-1, 0] }, 10: { at: [100, 75], dir: [-1, 0] },
+  11: { at: [100, 100], dir: [-1, -1] }, 0: { at: [75, 100], dir: [0, -1] },
+  1: { at: [25, 100], dir: [0, -1] }, 2: { at: [0, 100], dir: [1, -1] },
+  3: { at: [0, 75], dir: [1, 0] }, 4: { at: [0, 25], dir: [1, 0] },
+};
+
+/** 在锚点处画一支箭头：dir 方向，offset 为沿边的错开距离（px），gap 为离锚点的起始距离（px） */
+function arrowShape(dir: [number, number], color: string, offset: number, gap: number) {
+  const n = Math.hypot(dir[0], dir[1]);
+  const ux = dir[0] / n, uy = dir[1] / n;
+  const px = -uy, py = ux;
+  const sx = ux * gap + px * offset, sy = uy * gap + py * offset;
+  const len = 15, barb = 5, ang = Math.PI / 6;
+  const ex = sx + ux * len, ey = sy + uy * len;
+  const rot = (a: number) => [
+    ex + barb * (-ux * Math.cos(a) + uy * Math.sin(a)),
+    ey + barb * (-ux * Math.sin(a) - uy * Math.cos(a)),
+  ];
+  const [b1x, b1y] = rot(ang);
+  const [b2x, b2y] = rot(-ang);
+  return (
+    <path
+      d={`M${sx} ${sy} L${ex} ${ey} M${b1x} ${b1y} L${ex} ${ey} L${b2x} ${b2y}`}
+      fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+    />
+  );
+}
+
 export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [timeView, setTimeView] = useState<TimeView>('mingpan');
   const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('sanhe');
   const [liunianYear, setLiunianYear] = useState<number>(new Date().getFullYear());
+
+  // 飞星模式不画四化箭头；其余模式画大箭头，宫内星名后的小箭头就不再重复画
+  const showBigArrows = displayMode !== 'feixing';
 
   const palaceMap: Record<number, Palace> = {};
   chart.palaces.forEach(p => { palaceMap[p.branch] = p; });
@@ -181,7 +233,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         </h2>
       </motion.div>
 
-      {/* 4x4 命盘网格（含 SVG 叠加层） */}
+      {/* 4x4 命盘网格（含 SVG 叠加层）；外圈留白用来画自化外箭头 */}
+      <div className="relative" style={{ padding: showBigArrows ? OUTER_PAD : 0 }}>
       <div
         className="grid rounded-2xl overflow-hidden relative"
         style={{
@@ -206,8 +259,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 isSelected={selectedBranch === branch}
                 isSanFang={!!(sanFangSet?.has(branch) && selectedBranch !== branch)}
                 displayMode={displayMode}
-                selfSihuaMarks={siHuaMarksByBranch[branch]?.self}
-                incomingSihuaMarks={siHuaMarksByBranch[branch]?.incoming}
+                selfSihuaMarks={showBigArrows ? undefined : siHuaMarksByBranch[branch]?.self}
+                incomingSihuaMarks={showBigArrows ? undefined : siHuaMarksByBranch[branch]?.incoming}
                 overlayPalaceName={cyclePalaceLabel(branch)}
                 delay={i * 0.04}
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
@@ -225,8 +278,31 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
           className="[container-type:inline-size]"
-          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: '#ffffff' }}
+          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: '#ffffff', position: 'relative' }}
         >
+          {/* 内箭头：对宫化入（画在对宫靠中央的一侧，指向本宫） */}
+          {showBigArrows && (
+            <svg
+              width="100%" height="100%"
+              className="pointer-events-none"
+              style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+            >
+              {chart.palaces.map(pl => {
+                const cfg = INNER_ARROW[(pl.branch + 6) % 12];
+                const marks = siHuaMarksByBranch[pl.branch]?.incoming ?? [];
+                if (!cfg) return null;
+                return marks.map((m, i) => (
+                  <svg
+                    key={`in-${pl.branch}-${m.siHua}`}
+                    x={`${cfg.at[0]}%`} y={`${cfg.at[1]}%`}
+                    width="1" height="1" style={{ overflow: 'visible' }}
+                  >
+                    {arrowShape(cfg.dir, SIHUA_ARROW_COLORS[m.siHua], (i - (marks.length - 1) / 2) * 9, 4)}
+                  </svg>
+                ));
+              })}
+            </svg>
+          )}
           <div
             className="flex flex-col items-center justify-center h-full"
             style={{ padding: '3cqw', gap: '2.5cqw' }}
@@ -412,6 +488,29 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* 外箭头：自化 */}
+      {showBigArrows && (
+        <div className="pointer-events-none absolute" style={{ inset: OUTER_PAD }}>
+          <svg width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
+            {chart.palaces.map(pl => {
+              const cfg = OUTER_ARROW[pl.branch];
+              const marks = siHuaMarksByBranch[pl.branch]?.self ?? [];
+              if (!cfg) return null;
+              return marks.map((m, i) => (
+                <svg
+                  key={`out-${pl.branch}-${m.siHua}`}
+                  x={`${cfg.at[0]}%`} y={`${cfg.at[1]}%`}
+                  width="1" height="1" style={{ overflow: 'visible' }}
+                >
+                  {arrowShape(cfg.dir, SIHUA_ARROW_COLORS[m.siHua], (i - (marks.length - 1) / 2) * 9, 3)}
+                </svg>
+              ));
+            })}
+          </svg>
+        </div>
+      )}
       </div>
 
       {/* 图例 */}
