@@ -186,17 +186,13 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     return { yearAge, daLabel: `大${short}` };
   };
 
-  // 四化页的长箭头：宫干化出的星在别的宫 → 从本宫画到那个宫
-  const starPalaceBranch: Record<string, number> = {};
-  chart.palaces.forEach(pl => pl.stars.forEach(st => { starPalaceBranch[st.name] = pl.branch; }));
+  // 四化页的长箭头（和原版一致）：只画「对宫化入」——对宫宫干化出的星落在本宫，
+  // 箭头从对宫穿过盘心指向本宫；自化的星由盘外短箭头表示。
   const sihuaLines: { from: number; to: number; siHua: string }[] = [];
   if (displayMode === 'sihua') {
     chart.palaces.forEach(pl => {
-      const t = getSiHuaByStem(pl.stem);
-      (['禄', '权', '科', '忌'] as const).forEach(h => {
-        const target = starPalaceBranch[t[h]];
-        if (target === undefined) return;
-        if (target !== pl.branch) sihuaLines.push({ from: pl.branch, to: target, siHua: h });
+      (siHuaMarksByBranch[pl.branch]?.incoming ?? []).forEach(m => {
+        sihuaLines.push({ from: (pl.branch + 6) % 12, to: pl.branch, siHua: m.siHua });
       });
     });
   }
