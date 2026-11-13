@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { getSiHuaByStem, getYearBranchIndex } from '@/lib/ziwei/sihua';
@@ -61,6 +61,30 @@ const fs = (cqw: number, minPx: number): React.CSSProperties => ({
 });
 
 const p2 = (n: number) => String(n).padStart(2, '0');
+
+// 五行颜色（四柱用）：木绿 火红 土褐 金黄 水蓝
+const WX_COLOR: Record<string, string> = { 木: '#3f8f4f', 火: '#c0392b', 土: '#a0702a', 金: '#c99a14', 水: '#2563eb' };
+const STEM_WX = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
+const BRANCH_WX = ['水', '土', '木', '木', '土', '火', '火', '土', '金', '金', '土', '水'];
+const wxColorOf = (ch: string): string => {
+  const si = STEMS.indexOf(ch as never);
+  if (si >= 0) return WX_COLOR[STEM_WX[si]];
+  const bi = BRANCHES.indexOf(ch as never);
+  return bi >= 0 ? WX_COLOR[BRANCH_WX[bi]] : '#111';
+};
+
+const EyeOffIcon = () => (
+  <svg width="1.15em" height="1.15em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <line x1="1" y1="1" x2="23" y2="23" />
+  </svg>
+);
+const PencilIcon = () => (
+  <svg width="1.15em" height="1.15em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
 
 // ── 四化箭头（和原版一致）──────────────────────────────────────────
 // 外箭头 = 自化：宫干化出的星就在本宫，箭头画在盘外，朝外。
@@ -370,133 +394,152 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                     x={`${cfg.at[0]}%`} y={`${cfg.at[1]}%`}
                     width="1" height="1" style={{ overflow: 'visible' }}
                   >
-                    {arrowShape(cfg.dir, SIHUA_ARROW_COLORS[m.siHua], (i - (marks.length - 1) / 2) * 9, 4)}
+                    {arrowShape(
+                      // 从对宫（出发宫）指向本宫（落点宫）：沿两宫中心连线，所以是斜的
+                      [
+                        BRANCH_SVG_POS[pl.branch][0] - BRANCH_SVG_POS[(pl.branch + 6) % 12][0],
+                        BRANCH_SVG_POS[pl.branch][1] - BRANCH_SVG_POS[(pl.branch + 6) % 12][1],
+                      ],
+                      SIHUA_ARROW_COLORS[m.siHua], (i - (marks.length - 1) / 2) * 9, 4,
+                    )}
                   </svg>
                 ));
               })}
             </svg>
           )}
           <div
-            className="flex flex-col items-center justify-center h-full"
-            style={{ padding: '1.5cqw', gap: '1cqw' }}
+            className="flex flex-col items-center h-full"
+            style={{ padding: '4cqw 5cqw 3cqw', justifyContent: 'space-between' }}
           >
-            <div
-              className="font-medium"
-              style={{ ...fs(5, 9), letterSpacing: '0.3em', color: 'var(--t-gold)' }}
-            >
-              紫微斗数
-            </div>
-
-            {/* 命宫 / 身宫 / 五行局 / 命主 / 身主 */}
-            <div
-              className="text-center"
-              style={{ ...fs(4.4, 8), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.6cqw', lineHeight: 1.3 }}
-            >
-              <div>
-                命宫 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{BRANCHES[chart.mingGongBranch]}</span>
-                {' · '}身宫 <span className="font-medium" style={{ color: '#0284c7' }}>{BRANCHES[chart.shenGongBranch]}</span>
-                {' · '}<span className="font-medium" style={{ color: 'var(--t-gold)' }}>{chart.wuxingJuName}</span>
+            {/* 标题 + 阴阳男女 + 五行局 */}
+            <div className="text-center" style={{ display: 'flex', flexDirection: 'column', gap: '2.5cqw' }}>
+              <div className="font-bold" style={{ ...fs(4.6, 12), letterSpacing: '0.08em', color: '#111' }}>紫微斗数</div>
+              <div className="font-medium" style={{ ...fs(3.9, 10), color: '#111' }}>
+                {chart.yinYangGender}
+                <span style={{ display: 'inline-block', width: '5cqw' }} />
+                {chart.wuxingJuName}
               </div>
-              {(chart.mingZhu || chart.shenZhu) && (
-                <div>
-                  命主 <span className="font-medium" style={{ color: 'var(--t-gold)' }}>{chart.mingZhu}</span>
-                  {' · '}身主 <span className="font-medium" style={{ color: '#0284c7' }}>{chart.shenZhu}</span>
-                  {chart.yinYangGender ? <>{' · '}{chart.yinYangGender}</> : null}
-                </div>
-              )}
             </div>
 
+            <div style={{ width: '100%', borderTop: '1px dashed #e5e7eb' }} />
+
+            {/* 节气 / 非节气四柱：天干在上、地支在下，按五行着色 */}
+            {pillarRows.length > 0 && (
+              <div style={{ width: '100%', display: 'flex' }}>
+                {pillarRows.map((row, ci) => (
+                  <div
+                    key={row.label}
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5cqw', borderLeft: ci > 0 ? '1px solid #e5e7eb' : 'none' }}
+                  >
+                    <div style={{ ...fs(2.9, 8), color: '#6b7280' }}>{row.label}四柱</div>
+                    <div style={{ display: 'flex', gap: '3.5cqw' }}>
+                      {row.value.map((gz, idx) => (
+                        <div key={idx} className="font-medium" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.25, ...fs(3.3, 9) }}>
+                          <span style={{ color: wxColorOf(gz[0]) }}>{gz[0]}</span>
+                          <span style={{ color: wxColorOf(gz[1]) }}>{gz[1]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ width: '100%', borderTop: '1px dashed #e5e7eb' }} />
+
+            {/* 命主 身主 / 命宫 身宫 */}
+            <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', rowGap: '2.5cqw', ...fs(3, 8) }}>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#6b7280' }}>命主</span>
+                <span className="font-bold" style={{ color: '#111', marginLeft: '2.5cqw' }}>{chart.mingZhu}</span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#6b7280' }}>身主</span>
+                <span className="font-bold" style={{ color: '#0284c7', marginLeft: '2.5cqw' }}>{chart.shenZhu}</span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#6b7280' }}>命宫</span>
+                <span className="font-bold" style={{ color: '#111', marginLeft: '2.5cqw' }}>{BRANCHES[chart.mingGongBranch]}</span>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <span style={{ color: '#6b7280' }}>身宫</span>
+                <span className="font-bold" style={{ color: '#0284c7', marginLeft: '2.5cqw' }}>{BRANCHES[chart.shenGongBranch]}</span>
+              </div>
+            </div>
+
+            {/* 真太阳时 / 钟表时间 / 农历时间 */}
+            <div
+              style={{
+                width: '100%', display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: '1.8cqw', columnGap: '3cqw',
+                alignItems: 'center', ...fs(2.9, 8), color: '#6b7280',
+              }}
+            >
+              {solar && solar.corrected && solarDate && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5cqw' }}>真太阳时<EyeOffIcon /></div>
+                  <div className="tabular-nums" style={{ textAlign: 'right', fontFamily: 'ui-monospace, Menlo, monospace', color: '#374151' }}>
+                    {solarDate.year}.{p2(solarDate.month)}.{p2(solarDate.day)} {formatTrueSolarClock(solar)}
+                  </div>
+                </>
+              )}
+              {orig && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5cqw' }}>钟表时间<PencilIcon /></div>
+                  <div className="tabular-nums" style={{ textAlign: 'right', fontFamily: 'ui-monospace, Menlo, monospace', color: '#374151' }}>
+                    {orig.year}.{p2(orig.month)}.{p2(orig.day)} {p2(orig.clockHour)}:{p2(orig.clockMinute)}
+                  </div>
+                </>
+              )}
+              <div>农历时间</div>
+              <div style={{ textAlign: 'right', color: '#374151' }}>{lunarText}</div>
+            </div>
+
+            {/* 当前大限 */}
             {chart.currentDaXianIndex >= 0 && (() => {
               const dx = chart.daXians[chart.currentDaXianIndex];
               return (
                 <div
                   className="text-center"
                   style={{
-                    padding: '1cqw 4cqw',
-                    borderRadius: '3cqw',
-                    border: '1px solid rgba(147,51,234,0.55)',
-                    background: 'rgba(147,51,234,0.08)',
-                    ...fs(4.4, 8),
-                    color: '#9333ea',
+                    width: '100%', padding: '2cqw 3cqw', borderRadius: '3.5cqw',
+                    border: '1px solid #d1d5db', background: '#f3f4f6', color: '#111', ...fs(3, 8),
                   }}
                 >
-                  当前大限 <span className="font-medium tabular-nums">{dx.startAge}–{dx.endAge}岁</span> {dx.palaceName === '仆役' ? '交友' : dx.palaceName}
+                  当前大限 <span className="font-bold tabular-nums" style={{ ...fs(3.4, 9) }}>{dx.startAge}–{dx.endAge}岁</span>{' '}
+                  <span style={{ color: '#6b7280' }}>{dx.palaceName === '仆役' ? '交友' : dx.palaceName}</span>
                 </div>
               );
             })()}
 
-            {displayMode === 'sanhe' && timeView !== 'mingpan' && Object.keys(overlayData).length > 0 && (
-              <div className="text-center" style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)' }}>
-                层色{' '}
-                <span className="font-bold" style={{ color: '#b83a2e', marginLeft: '1.5cqw' }}>本</span>
-                <span className="font-bold" style={{ color: overlayLabel === '年' ? '#2563eb' : '#2f855a', marginLeft: '2.5cqw' }}>{overlayLabel}</span>
-              </div>
-            )}
-
-            {displayMode === 'sihua' && (
-              <div className="text-center" style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)' }}>
+            {/* 自化图示 / 四化图例 / 层色 */}
+            {displayMode === 'sihua' ? (
+              <div className="text-center" style={{ ...fs(3, 8), color: '#6b7280' }}>
                 四化{' '}
                 {([['A', '禄'], ['B', '权'], ['C', '科'], ['D', '忌']] as const).map(([l, h]) => (
                   <span key={l} className="font-bold" style={{ color: LETTER_RED, marginLeft: '1.5cqw' }}>{l}{h}</span>
                 ))}
               </div>
-            )}
-
-            {/* 钟表时间 / 真太阳时 / 农历 */}
-            <div
-              className="text-center"
-              style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)', display: 'flex', flexDirection: 'column', gap: '0.5cqw', lineHeight: 1.3 }}
-            >
-              {orig && (
+            ) : (
+              <div className="text-center" style={{ ...fs(2.9, 8), color: '#6b7280', display: 'flex', flexDirection: 'column', gap: '1.5cqw' }}>
                 <div>
-                  钟表时间 <span className="tabular-nums">{orig.year}-{p2(orig.month)}-{p2(orig.day)} {p2(orig.clockHour)}:{p2(orig.clockMinute)}</span>
+                  自化图示
+                  {([['禄', '#059669'], ['权', '#9333ea'], ['科', '#2563eb'], ['忌', '#dc2626']] as const).map(([h, c]) => (
+                    <span key={h} className="font-bold" style={{ color: c, marginLeft: '3cqw' }}>→{h}</span>
+                  ))}
                 </div>
-              )}
-              {solar && solar.corrected && solarDate && (
-                <div>
-                  真太阳时 <span className="tabular-nums font-medium" style={{ color: 'var(--t-gold)' }}>
-                    {solarDate.year}-{p2(solarDate.month)}-{p2(solarDate.day)} {formatTrueSolarClock(solar)}
-                  </span>
-                </div>
-              )}
-              <div>
-                农历 <span className="font-medium">{lunarText}</span>
-              </div>
-            </div>
-
-            {/* 四柱：节气 / 非节气 */}
-            {pillarRows.length > 0 && (
-              <div
-                style={{
-                  ...fs(4.2, 7.5),
-                  color: 'var(--tx-2)',
-                  display: 'grid',
-                  gridTemplateColumns: 'auto repeat(4, auto)',
-                  columnGap: '2.5cqw',
-                  rowGap: '0.5cqw',
-                  alignItems: 'center',
-                  justifyItems: 'center',
-                  lineHeight: 1.35,
-                }}
-              >
-                <span />
-                {['年', '月', '日', '时'].map(t => (
-                  <span key={t} style={{ color: 'var(--t-faint)' }}>{t}</span>
-                ))}
-                {pillarRows.map(row => (
-                  <Fragment key={row.label}>
-                    <span style={{ color: 'var(--t-faint)', justifySelf: 'end' }}>{row.label}</span>
-                    {row.value.map((gz, idx) => (
-                      <span key={idx} className="font-medium" style={{ color: 'var(--t-gold)' }}>{gz}</span>
-                    ))}
-                  </Fragment>
-                ))}
+                {displayMode === 'sanhe' && timeView !== 'mingpan' && Object.keys(overlayData).length > 0 && (
+                  <div>
+                    层色
+                    <span className="font-bold" style={{ color: '#b83a2e', marginLeft: '3cqw' }}>本</span>
+                    <span className="font-bold" style={{ color: overlayLabel === '年' ? '#2563eb' : '#2f855a', marginLeft: '3cqw' }}>{overlayLabel}</span>
+                  </div>
+                )}
               </div>
             )}
 
             {/* 出生地 · 真太阳时校正 */}
             {solar && solar.corrected && (
-              <div style={{ ...fs(3.8, 7), color: 'var(--t-faint)' }}>
+              <div style={{ ...fs(2.6, 7), color: '#9ca3af' }}>
                 {chart.birthInfo.city ? `${chart.birthInfo.city} · ` : ''}真太阳时{formatSignedMinutes(solar.totalCorrectionMinutes)}分
               </div>
             )}
@@ -641,7 +684,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                   width="1" height="1" style={{ overflow: 'visible' }}
                 >
                   {arrowShape(
-                    cfg.dir,
+                    // 外箭头：从盘心朝该宫锚点方向外指，所以左右两侧、上下两侧的箭头略带斜度
+                    [cfg.at[0] - 50, cfg.at[1] - 50],
                     isSihua ? LETTER_RED : SIHUA_ARROW_COLORS[m.siHua],
                     (i - (marks.length - 1) / 2) * (isSihua ? 16 : 9),
                     3,
