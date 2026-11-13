@@ -1,4 +1,5 @@
 'use client';
+import chartBg from './chart-bg.webp';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
@@ -376,18 +377,35 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         onDisplayModeChange={mode => { setDisplayMode(mode); setSelectedBranch(null); }}
       />
 
+      {/* 背景图容器：标题 + 命盘 */}
+      <div
+        style={{
+          position: 'relative',
+          backgroundColor: '#fdf5e1',
+          backgroundImage: `url(${chartBg.src})`,
+          backgroundSize: '100% 100%',
+          backgroundRepeat: 'no-repeat',
+          borderRadius: 10,
+          padding: '5% 3.5% 6.5%',
+        }}
+      >
       {/* 命盘标题 */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-3"
+        className="flex items-center justify-center gap-3 mb-2"
+        style={{ padding: '0 6%' }}
       >
-        <div className="text-[11px] tracking-[0.5em] uppercase mb-1" style={{ color: 'var(--t-faint)' }}>
-          Zi Wei Dou Shu
-        </div>
-        <h2 className="text-base tracking-[0.25em] font-medium" style={{ color: 'var(--t-gold)' }}>
+        <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #c9a45c)' }} />
+        <h2
+          style={{
+            color: '#5b3a1a', fontWeight: 700, letterSpacing: '0.18em', whiteSpace: 'nowrap',
+            fontSize: 'clamp(20px, 6.2vw, 32px)', fontFamily: '"Songti SC", "STSong", "Noto Serif SC", serif',
+          }}
+        >
           {chart.birthInfo.name ? `${chart.birthInfo.name} · ` : ''}紫微斗数命盘
         </h2>
+        <span style={{ flex: 1, height: 1, background: 'linear-gradient(270deg, transparent, #c9a45c)' }} />
       </motion.div>
 
       {/* 4x4 命盘网格（含 SVG 叠加层）；外圈留白用来画自化外箭头 */}
@@ -397,9 +415,9 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         style={{
           gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           gridTemplateRows: 'repeat(4, auto)',
-          gap: '1px',
-          background: '#d1d5db',
-          border: '1px solid #d1d5db',
+          gap: 0,
+          background: 'transparent',
+          border: '1px solid rgba(176,141,70,0.55)',
           boxSizing: 'border-box',
         }}
       >
@@ -408,7 +426,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           const palace = palaceMap[branch];
           if (!palace) return null;
           return (
-            <div key={branch} style={{ gridRow: row, gridColumn: col, background: '#ffffff', display: 'flex', minWidth: 0 }}>
+            <div key={branch} style={{ gridRow: row, gridColumn: col, background: 'transparent', display: 'flex', minWidth: 0 }}>
               <PalaceCell
                 palace={palace}
                 onClick={() => handlePalaceClick(branch)}
@@ -443,7 +461,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
           className="[container-type:inline-size]"
-          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: '#ffffff', position: 'relative' }}
+          style={{ gridRow: '2 / 4', gridColumn: '2 / 4', background: 'rgba(255,255,255,0.28)', position: 'relative', boxShadow: 'inset 0 0 0 0.5px rgba(176,141,70,0.45)' }}
         >
           {/* 内箭头：对宫化入（画在对宫靠中央的一侧，指向本宫） */}
           {showBigArrows && displayMode !== 'sihua' && (
@@ -780,7 +798,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       )}
 
       {/* 方位字（和原版一致：午=正南、子=正北、卯=正东、酉=正西） */}
-      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 14, fontWeight: 500, color: 'var(--tx-2)', letterSpacing: '0.08em' }}>
+      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 14, fontWeight: 500, color: '#6b5a3e', letterSpacing: '0.08em' }}>
         {DIRECTION_TOP.map(([t, x]) => (
           <span key={t} className="absolute whitespace-nowrap" style={{ left: `${x}%`, top: -(boardPad - 2), transform: 'translateX(-50%)' }}>{t}</span>
         ))}
@@ -794,6 +812,8 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           <span key={t} className="absolute" style={{ top: `${y}%`, right: -(boardPad - 1), transform: 'translateY(-50%)', writingMode: 'vertical-rl', lineHeight: 1 }}>{t}</span>
         ))}
       </div>
+      </div>
+
       </div>
 
       {/* 图例 */}

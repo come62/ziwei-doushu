@@ -215,14 +215,14 @@ export default function PalaceCell({
         width: '100%',
         background: isCurrentDaXian && displayMode === 'sanhe'
           ? 'rgba(147,51,234,0.08)'
-          : '#ffffff',
+          : 'rgba(255,255,255,0.55)',
         boxShadow: isCurrentDaXian && displayMode === 'sanhe'
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
           : isSelected
           ? 'inset 0 0 0 1.5px rgba(37,99,235,0.7)'
           : isSanFang
           ? 'inset 0 0 0 1px rgba(37,99,235,0.4)'
-          : 'none',
+          : 'inset 0 0 0 0.5px rgba(176,141,70,0.45)',
       }}
     >
       <div className="relative flex flex-col" style={{ padding: '3cqw 3.5cqw 3cqw', gap: '2cqw', minHeight: '100%' }}>
