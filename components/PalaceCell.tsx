@@ -99,7 +99,7 @@ export default function PalaceCell({
   const byType = (t: Star['type']) => stars.filter(s => s.type === t);
   const compact = displayMode !== 'sanhe';
   const major = byType('major');
-  const LUCKY_KEEP = ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马', '天喜'];
+  const LUCKY_KEEP = ['文昌', '文曲', '左辅', '右弼', '天魁', '天钺', '禄存', '天马', '天喜', '红鸾'];
   const SHA_ORDER = ['擎羊', '陀罗', '火星', '铃星', '地空', '地劫', '天刑'];
   const MINOR_KEEP = ['红鸾', '天喜', '天姚', '天刑'];
   const sortBy = (list: Star[], order: string[]) =>
@@ -108,6 +108,12 @@ export default function PalaceCell({
   const sha = compact ? sortBy(byType('sha').filter(s => SHA_ORDER.includes(s.name)), SHA_ORDER) : byType('sha');
   const minor = compact ? byType('minor').filter(s => MINOR_KEEP.includes(s.name)) : byType('minor');
   const ordered: Star[] = [...major, ...lucky, ...sha, ...minor];
+  // 保险：红鸾无论被归在哪一类，紧凑模式下都要显示
+  if (compact) {
+    stars.forEach(st => {
+      if (st.name === '红鸾' && !ordered.some(o => o.name === '红鸾')) ordered.push(st);
+    });
+  }
 
   const palaceName = name === '仆役' ? '交友' : name;
   const palaceShort = (palaceName.endsWith('宫') && palaceName.length > 2 ? palaceName.slice(0, -1) : palaceName);
