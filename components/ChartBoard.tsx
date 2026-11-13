@@ -361,7 +361,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
                 shierShen={displayMode === 'sanhe' && (timeView === 'mingpan' || timeView === 'daxian') ? shierShenFor(branch) : undefined}
                 flowStars={flowStarsFor(branch)}
-                layerColors={displayMode === 'sanhe' && timeView !== 'mingpan' && Object.keys(overlayData).length > 0}
+                layerColors={displayMode === 'sanhe'}
                 bottomInfo={displayMode !== 'sanhe' ? bottomInfoFor(branch) : undefined}
                 isLaiYin={branch === laiYinBranch}
               />
