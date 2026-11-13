@@ -382,19 +382,31 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         style={{
           position: 'relative',
           backgroundColor: '#fdf5e1',
-          backgroundImage: `url(${chartBg.src})`,
-          backgroundSize: '100% 100%',
-          backgroundRepeat: 'no-repeat',
           borderRadius: 10,
           padding: '5% 3.5% 6.5%',
         }}
       >
+      {/* 背景图层：仅背景图 40% 透明（opacity 0.6），文字和宫格不受影响 */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${chartBg.src})`,
+          backgroundSize: '100% 100%',
+          backgroundRepeat: 'no-repeat',
+          borderRadius: 10,
+          opacity: 0.6,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
       {/* 命盘标题 */}
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-center gap-3 mb-2"
-        style={{ padding: '0 6%' }}
+        style={{ position: 'relative', zIndex: 1, padding: '0 6%' }}
       >
         <span style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #c9a45c)' }} />
         <h2
@@ -409,7 +421,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       </motion.div>
 
       {/* 4x4 命盘网格（含 SVG 叠加层）；外圈留白用来画自化外箭头 */}
-      <div className="relative" style={{ padding: boardPad }}>
+      <div className="relative" style={{ padding: boardPad, zIndex: 1 }}>
       <div
         className="grid rounded-2xl overflow-hidden relative"
         style={{
