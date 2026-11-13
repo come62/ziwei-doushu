@@ -28,6 +28,10 @@ interface PalaceCellProps {
   bottomInfo?: { yearAge?: string; daLabel?: string };
   /** 来因宫（四化页左上角小标签） */
   isLaiYin?: boolean;
+  /** 流昌/流曲等流星（三合页大限视图），只显示星名 */
+  flowStars?: string[];
+  /** 三合页叠加视图：四化标签按层着色（本=红，限=绿，年=蓝），不带「限」字和虚线 */
+  layerColors?: boolean;
 }
 
 /** 四化：三合页用实色小方块（白字），四化页用红色字母 */
@@ -60,9 +64,11 @@ const twoChars = (name: string): [string, string] => {
   return [base[0] ?? '', base[1] ?? '宫'];
 };
 
+const LAYER_BG = { base: '#b83a2e', xian: '#2f855a', nian: '#2563eb' } as const;
+
 const SiHuaSquare = ({
-  siHua, overlay, label, onClick,
-}: { siHua: string; overlay?: boolean; label?: string; onClick?: (e: React.MouseEvent) => void }) => {
+  siHua, overlay, label, onClick, bg,
+}: { siHua: string; overlay?: boolean; label?: string; onClick?: (e: React.MouseEvent) => void; bg?: string }) => {
   const c = SIHUA_COLORS[siHua];
   return (
     <span
@@ -73,7 +79,7 @@ const SiHuaSquare = ({
         padding: '0.8cqw 1cqw',
         borderRadius: '1.6cqw',
         color: '#fff',
-        background: c?.color,
+        background: bg ?? c?.color,
         opacity: overlay ? 0.85 : 1,
         outline: overlay ? '1px dashed rgba(0,0,0,0.35)' : 'none',
         outlineOffset: 1,
@@ -90,7 +96,7 @@ const SiHuaSquare = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin,
+  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin, flowStars, layerColors,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -148,12 +154,13 @@ export default function PalaceCell({
         )}
         {star.siHua && (isSihuaMode
           ? <span className="font-bold" style={{ ...fs(8, 8), color: LETTER_RED, lineHeight: 1 }}>{SIHUA_LETTER[star.siHua]}</span>
-          : <SiHuaSquare siHua={star.siHua} />)}
+          : <SiHuaSquare siHua={star.siHua} bg={layerColors ? LAYER_BG.base : undefined} />)}
         {overlaySiHua && (
           <SiHuaSquare
             siHua={overlaySiHua}
-            overlay
-            label={overlayLabel}
+            overlay={!layerColors}
+            label={layerColors ? undefined : overlayLabel}
+            bg={layerColors ? (overlayLabel === '年' ? LAYER_BG.nian : LAYER_BG.xian) : undefined}
             onClick={e => { e.stopPropagation(); onSiHuaClick?.(star.name, overlaySiHua); }}
           />
         )}
@@ -216,6 +223,16 @@ export default function PalaceCell({
         {/* 星曜：竖排，一颗星一列 */}
         <div className="flex flex-wrap" style={{ columnGap: '1cqw', rowGap: '3cqw', alignItems: 'flex-start' }}>
           {ordered.map(renderStar)}
+          {flowStars?.map(n => (
+            <div key={n} className="flex flex-col items-center" style={{ gap: '0.8cqw' }}>
+              <span
+                className="font-medium"
+                style={{ ...fs(8.4, 8), writingMode: 'vertical-rl', textOrientation: 'upright', lineHeight: 1.08, letterSpacing: '0.02em', color: KIND_COLOR.lucky }}
+              >
+                {n}
+              </span>
+            </div>
+          ))}
         </div>
 
         {/* 底部 */}

@@ -241,11 +241,23 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
   const li = chart.lunarInfo;
   const lunarText = `${STEMS[li.yearStem]}${BRANCHES[li.yearBranch]}${li.isLeapMonth ? '闰' : ''}${Math.abs(li.lunarMonth)}月${li.lunarDay}日`;
   // 宫位底部十二神：博士（生年禄存起）/ 将前 / 岁前（本命态都按生年支起）
+  const suiQianBase = timeView === 'daxian' && currentDx ? currentDx.palaceBranch : li.yearBranch;
   const shierShenFor = (branch: number): string[] => [
     boshiShenName(li.yearStem, chart.birthInfo.gender, branch),
     jiangQianShenName(li.yearBranch, branch),
-    suiQianShenName(li.yearBranch, branch),
+    suiQianShenName(suiQianBase, branch),
   ];
+  // 大限流昌/流曲：按大限宫干起（三合页·大限视图才显示）
+  const CHANG_BRANCH = [5, 6, 8, 9, 8, 9, 11, 0, 2, 3]; // 甲乙丙丁戊己庚辛壬癸
+  const QU_BRANCH = [9, 8, 6, 5, 6, 5, 3, 2, 0, 11];
+  const dxStemIdx = currentDx ? chart.palaces.find(p => p.branch === currentDx.palaceBranch)?.stem : undefined;
+  const flowStarsFor = (branch: number): string[] | undefined => {
+    if (!(displayMode === 'sanhe' && timeView === 'daxian') || dxStemIdx === undefined) return undefined;
+    const out: string[] = [];
+    if (CHANG_BRANCH[dxStemIdx] === branch) out.push('流昌');
+    if (QU_BRANCH[dxStemIdx] === branch) out.push('流曲');
+    return out.length ? out : undefined;
+  };
   const pillarRows: { label: string; value: [string, string, string, string] }[] = [];
   if (li.fourPillars) pillarRows.push({ label: '节气', value: li.fourPillars });
   if (li.fourPillarsLunar) pillarRows.push({ label: '非节气', value: li.fourPillarsLunar });
@@ -314,7 +326,9 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
-                shierShen={displayMode === 'sanhe' && timeView === 'mingpan' ? shierShenFor(branch) : undefined}
+                shierShen={displayMode === 'sanhe' && (timeView === 'mingpan' || timeView === 'daxian') ? shierShenFor(branch) : undefined}
+                flowStars={flowStarsFor(branch)}
+                layerColors={displayMode === 'sanhe' && timeView !== 'mingpan' && Object.keys(overlayData).length > 0}
                 bottomInfo={displayMode !== 'sanhe' ? bottomInfoFor(branch) : undefined}
                 isLaiYin={branch === laiYinBranch}
               />
@@ -401,6 +415,14 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 </div>
               );
             })()}
+
+            {displayMode === 'sanhe' && timeView !== 'mingpan' && Object.keys(overlayData).length > 0 && (
+              <div className="text-center" style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)' }}>
+                层色{' '}
+                <span className="font-bold" style={{ color: '#b83a2e', marginLeft: '1.5cqw' }}>本</span>
+                <span className="font-bold" style={{ color: overlayLabel === '年' ? '#2563eb' : '#2f855a', marginLeft: '2.5cqw' }}>{overlayLabel}</span>
+              </div>
+            )}
 
             {displayMode === 'sihua' && (
               <div className="text-center" style={{ ...fs(4.2, 7.5), color: 'var(--tx-2)' }}>
