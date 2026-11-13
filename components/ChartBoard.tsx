@@ -57,7 +57,7 @@ const ANIMATION_ORDER = [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4];
 
 /** 字号随容器宽度缩放（1cqw = 容器宽度的 1%） */
 const fs = (cqw: number, minPx: number): React.CSSProperties => ({
-  fontSize: `max(${minPx}px, ${cqw}cqw)`,
+  fontSize: `max(${minPx + 1}px, ${cqw + 0.5}cqw)`,
 });
 
 const p2 = (n: number) => String(n).padStart(2, '0');
@@ -145,7 +145,7 @@ function arrowShape(dir: [number, number], color: string, offset: number, gap: n
       {letter && (
         <text
           x={ex + ux * 9 + px * 6} y={ey + uy * 9 + py * 6}
-          fill={color} fontSize={11} fontWeight={700}
+          fill={color} fontSize={12} fontWeight={700}
           textAnchor="middle" dominantBaseline="central"
         >{letter}</text>
       )}
@@ -382,10 +382,10 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-3"
       >
-        <div className="text-[10px] tracking-[0.5em] uppercase mb-1" style={{ color: 'var(--t-faint)' }}>
+        <div className="text-[11px] tracking-[0.5em] uppercase mb-1" style={{ color: 'var(--t-faint)' }}>
           Zi Wei Dou Shu
         </div>
-        <h2 className="text-sm tracking-[0.25em] font-medium" style={{ color: 'var(--t-gold)' }}>
+        <h2 className="text-base tracking-[0.25em] font-medium" style={{ color: 'var(--t-gold)' }}>
           {chart.birthInfo.name ? `${chart.birthInfo.name} · ` : ''}紫微斗数命盘
         </h2>
       </motion.div>
@@ -663,7 +663,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 <g key={`ln-${i}`}>
                   <line x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`}
                     stroke={LETTER_RED} strokeWidth={1} markerEnd="url(#sihua-head)" opacity={0.85} />
-                  <text x={`${lx}%`} y={`${ly}%`} fill={LETTER_RED} fontSize={12} fontWeight={700}
+                  <text x={`${lx}%`} y={`${ly}%`} fill={LETTER_RED} fontSize={13} fontWeight={700}
                     fontFamily="Georgia, 'Times New Roman', serif"
                     textAnchor="middle" dominantBaseline="central">{SIHUA_LETTER[ln.siHua]}</text>
                 </g>
@@ -780,7 +780,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       )}
 
       {/* 方位字（和原版一致：午=正南、子=正北、卯=正东、酉=正西） */}
-      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 13, fontWeight: 500, color: 'var(--tx-2)', letterSpacing: '0.08em' }}>
+      <div className="pointer-events-none absolute" style={{ inset: boardPad, fontSize: 14, fontWeight: 500, color: 'var(--tx-2)', letterSpacing: '0.08em' }}>
         {DIRECTION_TOP.map(([t, x]) => (
           <span key={t} className="absolute whitespace-nowrap" style={{ left: `${x}%`, top: -(boardPad - 2), transform: 'translateX(-50%)' }}>{t}</span>
         ))}
@@ -801,7 +801,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
-        className="mt-3 flex items-center justify-center gap-2 text-[9px] flex-wrap"
+        className="mt-3 flex items-center justify-center gap-2 text-[10px] flex-wrap"
       >
         {[
           { h: '化禄', c: 'text-emerald-500 border-emerald-500/30' },

@@ -61,7 +61,7 @@ const KIND_COLOR = {
 
 /** 字号随宫格宽度缩放（1cqw = 宫格宽度的 1%），任何屏幕宽度下比例一致 */
 const fs = (cqw: number, minPx: number): React.CSSProperties => ({
-  fontSize: `max(${minPx}px, ${cqw}cqw)`,
+  fontSize: `max(${minPx + 1}px, ${cqw + 0.5}cqw)`,
 });
 
 /** 宫名拆成两个字竖着放进小格：命宫→命/宫，迁移→迁/移 */
@@ -356,7 +356,7 @@ export default function PalaceCell({
                   className="font-medium"
                   style={{
                     ...tagStyle,
-                    fontSize: 'max(8px, 7.4cqw)',
+                    fontSize: 'max(9px, 7.9cqw)',
                     color: '#9a2f22',
                     borderColor: 'rgba(154,47,34,0.45)',
                     background: 'rgba(154,47,34,0.08)',
