@@ -199,7 +199,7 @@ export default function PalaceCell({
     >
       <div className="relative flex flex-col" style={{ padding: '3cqw 3.5cqw 3cqw', gap: '2cqw', minHeight: '100%' }}>
         {/* 左上角小标签：流年/大限宫名 */}
-        {isSihuaMode && isLaiYin ? (
+        {(isSihuaMode || displayMode === 'feixing') && isLaiYin ? (
           <div>
             <span style={{ ...tagStyle, color: '#9a2f22', borderColor: 'currentColor', background: 'rgba(154,47,34,0.06)' }}>来因</span>
           </div>
