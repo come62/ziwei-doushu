@@ -249,6 +249,12 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     }
     return {};
   })();
+  // 三合页·流年视图：除了流年层（蓝），还要叠加大限层（绿「限」）
+  const xianOverlay: Record<string, string> | undefined = (() => {
+    if (displayMode !== 'sanhe' || timeView !== 'liunian' || !currentDx) return undefined;
+    const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
+    return dxPalace ? buildSiHuaOverlay(dxPalace.stem) : undefined;
+  })();
   const overlayLabel = displayMode === 'feixing' && selectedBranch !== null ? '飞' : timeView === 'daxian' ? '限' : timeView === 'liunian' ? '年' : undefined;
 
   const handlePalaceClick = (branch: number) => {
@@ -357,6 +363,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 overlayPalaceName={cyclePalaceLabel(branch)}
                 delay={i * 0.04}
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
+                xianOverlayStarSiHua={xianOverlay}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
                 shierShen={displayMode === 'sanhe' && (timeView === 'mingpan' || timeView === 'daxian') ? shierShenFor(branch) : undefined}
@@ -531,6 +538,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                   <div>
                     层色
                     <span className="font-bold" style={{ color: '#b83a2e', marginLeft: '3cqw' }}>本</span>
+                    {xianOverlay && <span className="font-bold" style={{ color: '#2f855a', marginLeft: '3cqw' }}>限</span>}
                     <span className="font-bold" style={{ color: overlayLabel === '年' ? '#2563eb' : '#2f855a', marginLeft: '3cqw' }}>{overlayLabel}</span>
                   </div>
                 )}

@@ -18,6 +18,8 @@ interface PalaceCellProps {
   delay?: number;
   /** 叠加四化：星名 → 四化类型（'禄'/'权'/'科'/'忌'） */
   overlayStarSiHua?: Record<string, string>;
+  /** 流年视图下额外叠加的「大限层」四化（绿色「限」层），星名 → 四化类型 */
+  xianOverlayStarSiHua?: Record<string, string>;
   /** 叠加标签：'年'（流年）或 '限'（大限） */
   overlayLabel?: string;
   /** 点击叠加四化 badge 回调 */
@@ -97,7 +99,7 @@ const SiHuaSquare = ({
 
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
-  overlayPalaceName, overlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin, flowStars, layerColors,
+  overlayPalaceName, overlayStarSiHua, xianOverlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin, flowStars, layerColors,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -128,6 +130,7 @@ export default function PalaceCell({
 
   const renderStar = (star: Star) => {
     const overlaySiHua = overlayStarSiHua?.[star.name];
+    const xianSiHua = xianOverlayStarSiHua?.[star.name];
     const isMajor = star.type === 'major';
     const color = isSihuaMode && !isMajor ? '#111111' : KIND_COLOR[star.type];
     return (
@@ -156,6 +159,13 @@ export default function PalaceCell({
         {star.siHua && (isSihuaMode
           ? <span className="font-bold" style={{ ...fs(8, 8), color: LETTER_RED, lineHeight: 1 }}>{SIHUA_LETTER[star.siHua]}</span>
           : <SiHuaSquare siHua={star.siHua} bg={layerColors ? LAYER_BG.base : undefined} />)}
+        {xianSiHua && (
+          <SiHuaSquare
+            siHua={xianSiHua}
+            bg={LAYER_BG.xian}
+            onClick={e => { e.stopPropagation(); onSiHuaClick?.(star.name, xianSiHua); }}
+          />
+        )}
         {overlaySiHua && (
           <SiHuaSquare
             siHua={overlaySiHua}
