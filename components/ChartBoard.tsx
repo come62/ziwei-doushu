@@ -173,7 +173,12 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
     return undefined;
   };
   // 四化页底部小格：大限宫位简称（大命/大兄…）+ 当前大限内每个流年的岁数
-  const birthYear = chart.birthInfo.origInput?.year ?? (new Date().getFullYear() - chart.currentAge + 1);
+  // 虚岁按【农历生年】算：公历年份可能比农历年晚一年（如公历1997-01-05 = 农历丙子年1996），
+  // 用生年地支在 [公历年, 公历年-1] 里找出真正的农历年。
+  const solarBirthYear = chart.birthInfo.origInput?.year ?? (new Date().getFullYear() - chart.currentAge + 1);
+  const birthYear = [solarBirthYear, solarBirthYear - 1].find(
+    y => (((y - 4) % 12) + 12) % 12 === chart.lunarInfo.yearBranch,
+  ) ?? solarBirthYear;
   const bottomInfoFor = (branch: number): { yearAge?: string; daLabel?: string } => {
     if (!currentDx) return {};
     const cyc = getCyclePalaceName(currentDx.palaceBranch, branch);
