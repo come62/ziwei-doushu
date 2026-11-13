@@ -187,15 +187,28 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
   const currentDx = chart.daXians[chart.currentDaXianIndex];
   const getCyclePalaceName = (baseBranch: number, branch: number) =>
     PALACE_NAMES_ORDER[((baseBranch - branch) % 12 + 12) % 12];
-  const cyclePalaceLabel = (branch: number): string | undefined => {
-    if (displayMode === 'sanhe' && timeView === 'daxian' && currentDx) {
-      return `大限${getCyclePalaceName(currentDx.palaceBranch, branch)}`;
+  type CycleKind = 'daxian' | 'liunian' | 'xiaoxian';
+  // 宫位左上角小标签：大限/流年/小限各自把命宫放到自己的起点，其余宫按逆时针排宫名
+  const cycleMeta = (branch: number): { label: string; kind: CycleKind; ming: boolean } | undefined => {
+    if (displayMode === 'sanhe') {
+      if (timeView === 'daxian' && currentDx) {
+        return { label: `大限${getCyclePalaceName(currentDx.palaceBranch, branch)}`, kind: 'daxian', ming: branch === currentDx.palaceBranch };
+      }
+      if (timeView === 'liunian') {
+        const yb = getYearBranchIndex(liunianYear);
+        return { label: `流年${getCyclePalaceName(yb, branch)}`, kind: 'liunian', ming: branch === yb };
+      }
+      if (timeView === 'xiaoxian' && xxValid) {
+        return { label: `小限${getCyclePalaceName(xxBranch, branch)}`, kind: 'xiaoxian', ming: branch === xxBranch };
+      }
+      return undefined;
     }
-    if (displayMode !== 'sanhe' && timeView === 'liunian') {
-      return `流年${getCyclePalaceName(getYearBranchIndex(liunianYear), branch)}`;
+    if (timeView === 'liunian') {
+      return { label: `流年${getCyclePalaceName(getYearBranchIndex(liunianYear), branch)}`, kind: 'liunian', ming: false };
     }
     return undefined;
   };
+  const cyclePalaceLabel = (branch: number): string | undefined => cycleMeta(branch)?.label;
   // 四化页底部小格：大限宫位简称（大命/大兄…）+ 当前大限内每个流年的岁数
   // 虚岁按【农历生年】算：公历年份可能比农历年晚一年（如公历1997-01-05 = 农历丙子年1996），
   // 用生年地支在 [公历年, 公历年-1] 里找出真正的农历年。
@@ -213,6 +226,26 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       if ((((y - 4) % 12) + 12) % 12 === branch) { yearAge = `${y}年${age}岁`; break; }
     }
     return { yearAge, daLabel: `大${short}` };
+  };
+
+  // ── 小限：一年一宫，男顺女逆 ──
+  // 起点：寅午戌年生从辰起，申子辰从戌起，巳酉丑从未起，亥卯未从丑起（都是虚岁1岁）。
+  const XX_START: Record<number, number> = { 2: 4, 6: 4, 10: 4, 8: 10, 0: 10, 4: 10, 5: 7, 9: 7, 1: 7, 11: 1, 3: 1, 7: 1 };
+  const xxStart = XX_START[chart.lunarInfo.yearBranch] ?? 4;
+  const xxDir = chart.yinYangGender?.includes('女') ? -1 : 1;
+  const xiaoxianAge = liunianYear - birthYear + 1; // 所选流年的虚岁
+  const xxValid = xiaoxianAge >= 1;
+  const xxBranch = (((xxStart + (Math.max(1, xiaoxianAge) - 1) * xxDir) % 12) + 12) % 12;
+  const xxAgesFor = (branch: number): number[] => {
+    const a0 = ((((branch - xxStart) * xxDir) % 12) + 12) % 12 + 1;
+    return [0, 1, 2, 3, 4, 5].map(i => a0 + 12 * i);
+  };
+  const xxStemIdx = palaceMap[xxBranch]?.stem;
+  const xiaoxianNoteFor = (branch: number): string | undefined => {
+    if (displayMode !== 'sanhe' || !xxValid) return undefined;
+    if (timeView === 'xiaoxian') return `小限 ${xxAgesFor(branch).join('·')}`;
+    if (timeView === 'liunian' && branch === xxBranch) return `小限 · 虚岁${xiaoxianAge}`;
+    return undefined;
   };
 
   // 来因宫：宫干 = 生年干的宫（若有两个，取从寅宫起算的第一个）
@@ -244,23 +277,33 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
       if (dxPalace) return buildSiHuaOverlay(dxPalace.stem);
     }
-    if (timeView === 'liunian') {
+    if (timeView === 'liunian' || timeView === 'xiaoxian') {
       return buildSiHuaOverlay(getYearStemIndex(liunianYear));
     }
     return {};
   })();
   // 三合页·流年视图：除了流年层（蓝），还要叠加大限层（绿「限」）
   const xianOverlay: Record<string, string> | undefined = (() => {
-    if (displayMode !== 'sanhe' || timeView !== 'liunian' || !currentDx) return undefined;
+    if (displayMode !== 'sanhe' || (timeView !== 'liunian' && timeView !== 'xiaoxian') || !currentDx) return undefined;
     const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
     return dxPalace ? buildSiHuaOverlay(dxPalace.stem) : undefined;
   })();
-  const overlayLabel = displayMode === 'feixing' && selectedBranch !== null ? '飞' : timeView === 'daxian' ? '限' : timeView === 'liunian' ? '年' : undefined;
+  const overlayLabel = displayMode === 'feixing' && selectedBranch !== null ? '飞' : timeView === 'daxian' ? '限' : (timeView === 'liunian' || timeView === 'xiaoxian') ? '年' : undefined;
+
+  // 三合页默认选中当前视图的命宫（大限/流年/小限命宫），直接画出它的三方四正虚线；本命视图默认不画。
+  // selectedBranch：null=用默认；-1=用户点了默认宫把虚线关掉；其他=用户点选的宫。
+  const defaultBranch: number | null = displayMode !== 'sanhe' ? null
+    : timeView === 'daxian' && currentDx ? currentDx.palaceBranch
+    : timeView === 'liunian' ? getYearBranchIndex(liunianYear)
+    : timeView === 'xiaoxian' && xxValid ? xxBranch
+    : null;
+  const effectiveBranch: number | null = selectedBranch === -1 ? null : (selectedBranch ?? defaultBranch);
 
   const handlePalaceClick = (branch: number) => {
-    const isDeselecting = selectedBranch === branch;
-    setSelectedBranch(prev => prev === branch ? null : branch);
-    if (!isDeselecting) {
+    if (effectiveBranch === branch) {
+      setSelectedBranch(branch === defaultBranch ? -1 : null);
+    } else {
+      setSelectedBranch(branch);
       const palace = palaceMap[branch];
       if (palace) onPalaceSelect?.(palace);
     }
@@ -280,29 +323,44 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
   const li = chart.lunarInfo;
   const lunarText = `${STEMS[li.yearStem]}${BRANCHES[li.yearBranch]}${li.isLeapMonth ? '闰' : ''}${Math.abs(li.lunarMonth)}月${li.lunarDay}日`;
   // 宫位底部十二神：博士（生年禄存起）/ 将前 / 岁前（本命态都按生年支起）
-  const suiQianBase = timeView === 'daxian' && currentDx ? currentDx.palaceBranch : li.yearBranch;
+  const shenBase = timeView === 'daxian' && currentDx ? currentDx.palaceBranch
+    : (timeView === 'liunian' || timeView === 'xiaoxian') ? getYearBranchIndex(liunianYear)
+    : li.yearBranch;
   const shierShenFor = (branch: number): string[] => [
     boshiShenName(li.yearStem, chart.birthInfo.gender, branch),
-    jiangQianShenName(li.yearBranch, branch),
-    suiQianShenName(suiQianBase, branch),
+    jiangQianShenName(shenBase, branch),
+    suiQianShenName(shenBase, branch),
   ];
   // 大限流昌/流曲：按大限宫干起（三合页·大限视图才显示）
   const CHANG_BRANCH = [5, 6, 8, 9, 8, 9, 11, 0, 2, 3]; // 甲乙丙丁戊己庚辛壬癸
   const QU_BRANCH = [9, 8, 6, 5, 6, 5, 3, 2, 0, 11];
   const dxStemIdx = currentDx ? chart.palaces.find(p => p.branch === currentDx.palaceBranch)?.stem : undefined;
+  // 流昌/流曲：大限视图按大限宫干，流年/小限视图按流年天干；小昌/小曲：按所选流年的小限命宫宫干。本命视图都不显示。
   const flowStarsFor = (branch: number): string[] | undefined => {
-    if (!(displayMode === 'sanhe' && timeView === 'daxian') || dxStemIdx === undefined) return undefined;
+    if (displayMode !== 'sanhe' || timeView === 'mingpan') return undefined;
     const out: string[] = [];
-    if (CHANG_BRANCH[dxStemIdx] === branch) out.push('流昌');
-    if (QU_BRANCH[dxStemIdx] === branch) out.push('流曲');
+    const flowStem = timeView === 'daxian' ? dxStemIdx : getYearStemIndex(liunianYear);
+    if (flowStem !== undefined) {
+      if (CHANG_BRANCH[flowStem] === branch) out.push('流昌');
+      if (QU_BRANCH[flowStem] === branch) out.push('流曲');
+    }
+    if (xxValid && xxStemIdx !== undefined) {
+      if (CHANG_BRANCH[xxStemIdx] === branch) out.push('小昌');
+      if (QU_BRANCH[xxStemIdx] === branch) out.push('小曲');
+    }
     return out.length ? out : undefined;
   };
+  const liunianPalaceName = (() => {
+    const n = palaceMap[getYearBranchIndex(liunianYear)]?.name ?? '';
+    if (n === '仆役') return '交友';
+    return n.endsWith('宫') && n.length > 2 ? n.slice(0, -1) : n;
+  })();
   const pillarRows: { label: string; value: [string, string, string, string] }[] = [];
   if (li.fourPillars) pillarRows.push({ label: '节气', value: li.fourPillars });
   if (li.fourPillarsLunar) pillarRows.push({ label: '非节气', value: li.fourPillarsLunar });
 
   // 三方四正
-  const sanFangBranches = displayMode === 'sanhe' && selectedBranch !== null ? getSanFangSiZheng(selectedBranch) : null;
+  const sanFangBranches = displayMode === 'sanhe' && effectiveBranch !== null ? getSanFangSiZheng(effectiveBranch) : null;
   const sanFangSet = sanFangBranches ? new Set(sanFangBranches) : null;
 
   return (
@@ -312,7 +370,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         chart={chart}
         view={timeView}
         liunianYear={liunianYear}
-        onViewChange={setTimeView}
+        onViewChange={v => { setTimeView(v); setSelectedBranch(null); }}
         onYearChange={setLiunianYear}
         displayMode={displayMode}
         onDisplayModeChange={mode => { setDisplayMode(mode); setSelectedBranch(null); }}
@@ -355,18 +413,21 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
                 palace={palace}
                 onClick={() => handlePalaceClick(branch)}
                 onStarClick={(star) => onStarSelect?.(star, palace)}
-                isSelected={selectedBranch === branch}
-                isSanFang={!!(sanFangSet?.has(branch) && selectedBranch !== branch)}
+                isSelected={effectiveBranch === branch}
+                isSanFang={!!(sanFangSet?.has(branch) && effectiveBranch !== branch)}
                 displayMode={displayMode}
                 selfSihuaMarks={showBigArrows ? undefined : siHuaMarksByBranch[branch]?.self}
                 incomingSihuaMarks={showBigArrows ? undefined : siHuaMarksByBranch[branch]?.incoming}
                 overlayPalaceName={cyclePalaceLabel(branch)}
+                overlayPalaceKind={cycleMeta(branch)?.kind}
+                overlayPalaceMing={cycleMeta(branch)?.ming}
+                xiaoxianNote={xiaoxianNoteFor(branch)}
                 delay={i * 0.04}
                 overlayStarSiHua={Object.keys(overlayData).length > 0 ? overlayData : undefined}
                 xianOverlayStarSiHua={xianOverlay}
                 overlayLabel={overlayLabel}
                 onSiHuaClick={(starName, siHua) => onSiHuaClick?.(starName, siHua, timeView)}
-                shierShen={displayMode === 'sanhe' && (timeView === 'mingpan' || timeView === 'daxian') ? shierShenFor(branch) : undefined}
+                shierShen={displayMode === 'sanhe' ? shierShenFor(branch) : undefined}
                 flowStars={flowStarsFor(branch)}
                 layerColors={displayMode === 'sanhe'}
                 bottomInfo={displayMode !== 'sanhe' ? bottomInfoFor(branch) : undefined}
@@ -502,7 +563,19 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
             </div>
 
             {/* 当前大限 */}
-            {chart.currentDaXianIndex >= 0 && (() => {
+            {displayMode === 'sanhe' && timeView === 'liunian' ? (
+              <div
+                className="text-center"
+                style={{
+                  width: '100%', padding: '2cqw 3cqw', borderRadius: '3.5cqw',
+                  border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', ...fs(3, 8),
+                }}
+              >
+                {liunianYear} 流年{' '}
+                <span className="font-bold" style={{ ...fs(3.4, 9) }}>{STEMS[getYearStemIndex(liunianYear)]}{BRANCHES[getYearBranchIndex(liunianYear)]}</span>{' '}
+                <span style={{ color: '#8b5cf6' }}>{liunianPalaceName}</span>
+              </div>
+            ) : displayMode === 'sanhe' && timeView === 'xiaoxian' ? null : chart.currentDaXianIndex >= 0 && (() => {
               const dx = chart.daXians[chart.currentDaXianIndex];
               return (
                 <div
@@ -603,7 +676,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         <AnimatePresence>
           {sanFangBranches !== null && (
             <motion.div
-              key={`sf-${selectedBranch}`}
+              key={`sf-${effectiveBranch}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { STEMS, SI_HUA_TABLE } from '@/lib/ziwei/constants';
 import type { ZiweiChart } from '@/lib/ziwei/types';
 
-export type TimeView = 'mingpan' | 'daxian' | 'liunian';
+export type TimeView = 'mingpan' | 'daxian' | 'liunian' | 'xiaoxian';
 export type ChartDisplayMode = 'sanhe' | 'feixing' | 'sihua';
 
 interface TimeNavProps {
@@ -74,7 +74,7 @@ export default function TimeNav({
       };
     }
 
-    if (view === 'liunian') {
+    if (view === 'liunian' || view === 'xiaoxian') {
       const stemIndex = getYearStemIndex(liunianYear);
       return {
         stemName: STEMS[stemIndex],
@@ -142,7 +142,7 @@ export default function TimeNav({
           {/* 年份 +/- */}
           <div className="flex items-center" style={{ gap: '0.5cqw' }}>
             <button
-              onClick={e => { e.stopPropagation(); onYearChange(liunianYear - 1); if (view !== 'liunian') onViewChange('liunian'); }}
+              onClick={e => { e.stopPropagation(); onYearChange(liunianYear - 1); if (view !== 'liunian' && view !== 'xiaoxian') onViewChange('liunian'); }}
               className="flex items-center justify-center rounded"
               style={{ ...fs(4, 12), width: '5.5cqw', height: '6cqw', color: INACTIVE }}
             >
@@ -156,7 +156,7 @@ export default function TimeNav({
               {liunianYear}
             </span>
             <button
-              onClick={e => { e.stopPropagation(); onYearChange(liunianYear + 1); if (view !== 'liunian') onViewChange('liunian'); }}
+              onClick={e => { e.stopPropagation(); onYearChange(liunianYear + 1); if (view !== 'liunian' && view !== 'xiaoxian') onViewChange('liunian'); }}
               className="flex items-center justify-center rounded"
               style={{ ...fs(4, 12), width: '5.5cqw', height: '6cqw', color: INACTIVE }}
             >
@@ -164,6 +164,14 @@ export default function TimeNav({
             </button>
           </div>
         </div>
+
+        {/* 小限：年份沿用流年的年份切换 */}
+        <TabButton
+          active={view === 'xiaoxian'}
+          onClick={() => onViewChange('xiaoxian')}
+        >
+          小限
+        </TabButton>
       </div>
 
       {/* 叠加四化说明行 */}

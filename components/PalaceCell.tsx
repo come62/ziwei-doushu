@@ -34,6 +34,11 @@ interface PalaceCellProps {
   flowStars?: string[];
   /** 三合页叠加视图：四化标签按层着色（本=红，限=绿，年=蓝），不带「限」字和虚线 */
   layerColors?: boolean;
+  /** 宫名小标签所属的时间层，以及该宫是否为该层的命宫（命宫标签按层着色） */
+  overlayPalaceKind?: 'daxian' | 'liunian' | 'xiaoxian';
+  overlayPalaceMing?: boolean;
+  /** 小限说明（金色小字）：小限视图为该宫的小限岁数串，流年视图为「小限 · 虚岁N」 */
+  xiaoxianNote?: string;
 }
 
 /** 四化：三合页用实色小方块（白字），四化页用红色字母 */
@@ -100,6 +105,7 @@ const SiHuaSquare = ({
 export default function PalaceCell({
   palace, onClick, onStarClick, isSelected, isSanFang, displayMode = 'sanhe', delay = 0,
   overlayPalaceName, overlayStarSiHua, xianOverlayStarSiHua, overlayLabel, onSiHuaClick, shierShen, bottomInfo, isLaiYin, flowStars, layerColors,
+  overlayPalaceKind, overlayPalaceMing, xiaoxianNote,
 }: PalaceCellProps) {
   const { branch, stem, name, stars, daXianAge, isCurrentDaXian, isMingGong, isShenGong } = palace;
   const ganzhi = `${STEMS[stem]}${BRANCHES[branch]}`;
@@ -180,6 +186,13 @@ export default function PalaceCell({
     );
   };
 
+  const KIND_TAG = { daxian: '#2f855a', liunian: '#7c3aed', xiaoxian: '#b8860b' } as const;
+  const cycleTagStyle: React.CSSProperties = displayMode !== 'sanhe'
+    ? { color: '#2563eb', borderColor: 'currentColor', background: 'rgba(124,58,237,0.06)' }
+    : overlayPalaceMing && overlayPalaceKind
+    ? { color: KIND_TAG[overlayPalaceKind], borderColor: 'currentColor', background: '#fff' }
+    : { color: '#374151', borderColor: '#d1d5db', background: '#fff' };
+
   const tagStyle: React.CSSProperties = {
     ...fs(6.4, 7),
     border: '1px solid',
@@ -224,7 +237,7 @@ export default function PalaceCell({
           </div>
         ) : overlayPalaceName ? (
           <div>
-            <span style={{ ...tagStyle, color: displayMode === 'sanhe' ? '#7c3aed' : '#2563eb', borderColor: 'currentColor', background: 'rgba(124,58,237,0.06)' }}>
+            <span style={{ ...tagStyle, ...cycleTagStyle }}>
               {overlayPalaceName}
             </span>
           </div>
@@ -246,6 +259,13 @@ export default function PalaceCell({
             </div>
           ))}
         </div>
+
+        {/* 小限说明（金色小字） */}
+        {xiaoxianNote && (
+          <div className="mt-auto text-center tabular-nums" style={{ ...fs(6, 6.5), color: '#b0842a', letterSpacing: '0.02em' }}>
+            {xiaoxianNote}
+          </div>
+        )}
 
         {/* 底部 */}
         {isSihuaMode ? (
@@ -283,7 +303,7 @@ export default function PalaceCell({
             </div>
           </div>
         ) : (
-          <div className="mt-auto flex items-end justify-between" style={{ gap: '2cqw' }}>
+          <div className={`${xiaoxianNote ? '' : 'mt-auto'} flex items-end justify-between`} style={{ gap: '2cqw' }}>
             <div className="flex flex-col leading-tight" style={{ ...fs(6.4, 7), color: '#6b7280' }}>
               {displayMode === 'feixing' ? (() => {
                 const m = bottomInfo?.yearAge?.match(/(\d+)年(\d+)岁/);
