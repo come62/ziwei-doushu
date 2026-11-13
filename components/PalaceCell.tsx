@@ -67,8 +67,8 @@ const twoChars = (name: string): [string, string] => {
 const LAYER_BG = { base: '#b83a2e', xian: '#2f855a', nian: '#2563eb' } as const;
 
 const SiHuaSquare = ({
-  siHua, overlay, label, onClick, bg,
-}: { siHua: string; overlay?: boolean; label?: string; onClick?: (e: React.MouseEvent) => void; bg?: string }) => {
+  siHua, overlay, label, onClick, bg, outlined,
+}: { siHua: string; overlay?: boolean; label?: string; onClick?: (e: React.MouseEvent) => void; bg?: string; outlined?: boolean }) => {
   const c = SIHUA_COLORS[siHua];
   return (
     <span
@@ -78,8 +78,9 @@ const SiHuaSquare = ({
         minWidth: '10cqw',
         padding: '0.8cqw 1cqw',
         borderRadius: '1.6cqw',
-        color: '#fff',
-        background: bg ?? c?.color,
+        color: outlined ? c?.color : '#fff',
+        background: outlined ? '#fff' : (bg ?? c?.color),
+        border: outlined ? `1px solid ${c?.color}` : undefined,
         opacity: overlay ? 0.85 : 1,
         outline: overlay ? '1px dashed rgba(0,0,0,0.35)' : 'none',
         outlineOffset: 1,
@@ -158,8 +159,9 @@ export default function PalaceCell({
         {overlaySiHua && (
           <SiHuaSquare
             siHua={overlaySiHua}
-            overlay={!layerColors}
-            label={layerColors ? undefined : overlayLabel}
+            overlay={!layerColors && !(displayMode === 'feixing' && overlayLabel !== '年')}
+            outlined={displayMode === 'feixing' && overlayLabel !== '年'}
+            label={layerColors || displayMode === 'feixing' ? undefined : overlayLabel}
             bg={layerColors ? (overlayLabel === '年' ? LAYER_BG.nian : LAYER_BG.xian) : undefined}
             onClick={e => { e.stopPropagation(); onSiHuaClick?.(star.name, overlaySiHua); }}
           />

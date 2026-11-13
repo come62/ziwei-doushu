@@ -206,7 +206,11 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       const selectedPalace = palaceMap[selectedBranch];
       if (selectedPalace) return buildSiHuaOverlay(selectedPalace.stem);
     }
-    if (displayMode === 'feixing' && (timeView === 'mingpan' || timeView === 'daxian')) return {};
+    if (displayMode === 'feixing' && (timeView === 'mingpan' || timeView === 'daxian')) {
+      // 飞星页默认显示命宫宫干的飞化（空心标签）
+      const mingPalace = palaceMap[chart.mingGongBranch];
+      return mingPalace ? buildSiHuaOverlay(mingPalace.stem) : {};
+    }
     if (timeView === 'daxian' && currentDx) {
       const dxPalace = chart.palaces.find(p => p.branch === currentDx.palaceBranch);
       if (dxPalace) return buildSiHuaOverlay(dxPalace.stem);
