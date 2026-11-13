@@ -308,8 +308,17 @@ export default function PalaceCell({
                 </span>
               </>
             ) : (
+              <>
+              {/* 底部中间：大限岁数（命宫/身宫格因带标签，岁数放右侧，和参考图一致） */}
+              <div className="flex-1 flex justify-center">
+                {daXianAge && !(isMingGong || isShenGong) && (
+                  <span className="tabular-nums" style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#7c3aed' : '#6b7280' }}>
+                    {daXianAge[0]}-{daXianAge[1]}
+                  </span>
+                )}
+              </div>
               <div className="flex flex-col items-end" style={{ gap: '0.8cqw' }}>
-                {daXianAge && (
+                {daXianAge && (isMingGong || isShenGong) && (
                   <span className="tabular-nums" style={{ ...fs(6.8, 7), color: isCurrentDaXian ? '#7c3aed' : '#6b7280' }}>
                     {daXianAge[0]}-{daXianAge[1]}
                   </span>
@@ -328,6 +337,7 @@ export default function PalaceCell({
                   {palaceShort}{isMingGong ? ' · 命' : ''}{isShenGong ? ' · 身' : ''}
                 </span>
               </div>
+              </>
             )}
           </div>
         )}
