@@ -215,10 +215,6 @@ export default function PalaceCell({
         width: '100%',
         background: isCurrentDaXian && displayMode === 'sanhe'
           ? 'rgba(147,51,234,0.08)'
-          : isSelected
-          ? 'rgba(37,99,235,0.18)'
-          : isSanFang
-          ? 'rgba(37,99,235,0.09)'
           : '#ffffff',
         boxShadow: isCurrentDaXian && displayMode === 'sanhe'
           ? 'inset 3px 0 0 rgba(147,51,234,0.5)'
