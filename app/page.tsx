@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
 import StarField from '@/components/StarField';
 import { useTheme, type Theme } from '@/components/ThemeProvider';
-import AnnouncementModal from '@/components/AnnouncementModal';
 
 // ─── 滚动入场 wrapper ────────────────────────────────────
 function FadeIn({
@@ -91,6 +90,7 @@ const STARS = [
 const FEATURES = [
   {
     tag: '排盘体系',
+    visual: 0,
     title: '紫微命盘\n飞星四化在线排盘',
     subtitle: '非简化版，严格遵循传统排盘法',
     points: [
@@ -101,6 +101,7 @@ const FEATURES = [
   },
   {
     tag: '命盘呈现',
+    visual: 1,
     title: '完整十四主星\n四化飞星',
     subtitle: '结构清晰，一眼看懂主轴与重点',
     points: [
@@ -111,18 +112,8 @@ const FEATURES = [
     ],
   },
   {
-    tag: 'AI 解读',
-    title: '深度解盘\n不止于算',
-    subtitle: '紫微斗数知识库 × Claude AI',
-    points: [
-      '命格分析：从命宫主星出发，结合三方四正，给出全面的性格与人生格局判断',
-      '六大维度解读：事业方向、感情婚姻、财运模式、健康注意、家庭关系、子女缘分',
-      '大限流年追踪：当前10年大限重点、今年流年宫位的具体提示与行动建议',
-      '自由追问：针对你的命盘直接提问，「今年能换工作吗」「什么时候结婚运最好」',
-    ],
-  },
-  {
     tag: '格局识别',
+    visual: 3,
     title: '自动检测\n命盘格局',
     subtitle: '从星曜组合中发现你的命中注定',
     points: [
@@ -255,8 +246,8 @@ const STAR_BRIEF: Record<string, { attr: string; brief: string }> = {
 };
 
 // ─── 功能视觉装饰 ────────────────────────────────────────
-function FeatureVisual({ index, colors: c }: { index: number; colors: ReturnType<typeof useColors> }) {
-  if (index === 0) {
+function FeatureVisual({ visual, colors: c }: { visual: number; colors: ReturnType<typeof useColors> }) {
+  if (visual === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-5">
         <div className="grid grid-cols-4 gap-1.5 w-72 mx-auto">
@@ -285,7 +276,7 @@ function FeatureVisual({ index, colors: c }: { index: number; colors: ReturnType
     );
   }
 
-  if (index === 1) {
+  if (visual === 1) {
     const [sel, setSel] = useState<string | null>(null);
     const selInfo = sel ? (STAR_BRIEF[sel] ?? SIHUA_BRIEF[sel] ?? null) : null;
     return (
@@ -356,35 +347,7 @@ function FeatureVisual({ index, colors: c }: { index: number; colors: ReturnType
     );
   }
 
-  if (index === 2) {
-    const msgs = [
-      { role: 'user', text: '我今年的事业运势如何？' },
-      { role: 'ai', text: '命宫天机化禄，今年大限走官禄宫，三方有左辅相助，事业有贵人提携，适合主动拓展…' },
-      { role: 'user', text: '什么时候感情运最好？' },
-    ];
-    return (
-      <div className="flex flex-col gap-2 h-full justify-center">
-        {msgs.map((m, i) => (
-          <motion.div key={i}
-            initial={{ opacity: 0, x: m.role === 'user' ? 10 : -10 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.15 }}
-            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className="max-w-[85%] text-[11px] px-3 py-2 rounded-lg leading-relaxed"
-              style={{
-                border: `1px solid ${m.role === 'user' ? c.goldLine : c.cardBorder}`,
-                background: m.role === 'user' ? c.starBg : c.featureBg,
-                color: m.role === 'user' ? c.goldSolid : c.textSecond,
-              }}>
-              {m.text}
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    );
-  }
-
-  if (index === 3) {
+  if (visual === 3) {
     const patterns = [
       { name: '杀破狼格', desc: '开创进取之命', ok: true },
       { name: '廉相格',   desc: '行政印绶之格', ok: true },
@@ -444,8 +407,6 @@ export default function HomePage() {
 
   return (
     <div style={{ background: c.bgBase, transition: 'background 0.35s ease' }} className="overflow-x-hidden">
-      {/* 致用户公告——首次访问全屏覆盖，关闭后才进入首页 */}
-      <AnnouncementModal />
 
       <StarField />
 
@@ -470,20 +431,6 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           <ThemeToggle />
-          <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-            onClick={() => router.push('/heming')}
-            className="text-[11px] sm:text-xs px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-300"
-            style={{ border: `1px solid ${c.navBorder}`, color: c.textMuted }}>
-            合盘
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-            onClick={() => router.push('/chart')}
-            className="text-[11px] sm:text-xs px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full transition-all duration-300"
-            style={{ border: `1px solid ${c.goldLine}`, color: c.goldSolid }}>
-            立即起盘
-          </motion.button>
         </div>
       </nav>
 
@@ -561,68 +508,6 @@ export default function HomePage() {
               </motion.div>
             ))}
           </motion.div>
-        </motion.div>
-
-        {/* 上线公告便利贴 — 桌面端绝对定位右侧 */}
-        <motion.div
-          initial={{ opacity: 0, x: 30, rotate: 0 }}
-          animate={{ opacity: 1, x: 0, rotate: -4 }}
-          transition={{ delay: 1.4, duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="absolute hidden lg:block pointer-events-none"
-          style={{
-            right: 'clamp(2%, 6vw, 8%)',
-            top: '54%',
-            maxWidth: '240px',
-          }}
-        >
-          <div style={{
-            background: 'linear-gradient(135deg, #fff5e3 0%, #ffe1c0 100%)',
-            border: '2px dashed rgba(232,132,62,0.45)',
-            borderRadius: '16px',
-            padding: '14px 18px',
-            boxShadow: '0 8px 24px rgba(196,90,45,0.18), 0 2px 6px rgba(196,90,45,0.1)',
-            fontFamily: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
-          }}>
-            <div style={{ fontSize: '20px', marginBottom: '6px', lineHeight: 1 }}>🎁</div>
-            <div style={{ fontSize: '13px', lineHeight: 1.7, color: '#8b3a1a', fontWeight: 500 }}>
-              <span style={{ color: '#c45a2d', fontWeight: 700, fontSize: '14px' }}>5/1 — 5/8</span>
-              <span> 限时回馈</span>
-            </div>
-            <div style={{ fontSize: '13px', lineHeight: 1.7, color: '#8b3a1a', fontWeight: 500 }}>
-              全部功能 + AI 提问
-              <strong style={{ color: '#c45a2d' }}> 全免费</strong>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* 上线公告便利贴 — 手机端正常流式显示（hero 内容下方居中） */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0, rotate: -2 }}
-          transition={{ delay: 1.4, duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
-          className="lg:hidden mx-auto mt-8 mb-2 pointer-events-none"
-          style={{
-            maxWidth: 'min(280px, 84vw)',
-          }}
-        >
-          <div style={{
-            background: 'linear-gradient(135deg, #fff5e3 0%, #ffe1c0 100%)',
-            border: '2px dashed rgba(232,132,62,0.45)',
-            borderRadius: '14px',
-            padding: '12px 16px',
-            boxShadow: '0 6px 18px rgba(196,90,45,0.16), 0 2px 4px rgba(196,90,45,0.08)',
-            fontFamily: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '18px', marginBottom: '4px', lineHeight: 1 }}>🎁</div>
-            <div style={{ fontSize: '12px', lineHeight: 1.7, color: '#8b3a1a', fontWeight: 500 }}>
-              <span style={{ color: '#c45a2d', fontWeight: 700, fontSize: '13px' }}>5/1 — 5/8</span>
-              <span> 限时回馈</span>
-            </div>
-            <div style={{ fontSize: '12px', lineHeight: 1.7, color: '#8b3a1a', fontWeight: 500 }}>
-              全部功能 + AI <strong style={{ color: '#c45a2d' }}>全免费</strong>
-            </div>
-          </div>
         </motion.div>
 
         {/* 滚动提示（绝对定位，不影响 hero opacity 计算） */}
@@ -839,7 +724,7 @@ export default function HomePage() {
                         minHeight: i <= 1 ? '540px' : i === 2 ? '460px' : '320px',
                         boxShadow: c.cardShadow,
                       }}>
-                      <FeatureVisual index={i} colors={c} />
+                      <FeatureVisual visual={feature.visual} colors={c} />
                     </div>
                   </FadeIn>
                 </div>
@@ -908,58 +793,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ══ 合盘入口 ══════════════════════════════════════ */}
-      <section className="relative z-10 px-6 md:px-10 lg:px-14 py-20">
-        <div className="mx-auto" style={{ maxWidth: '1280px' }}>
-          <div className="rounded-2xl p-10 md:p-14 text-center"
-            style={{
-              background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.8)',
-              border: `1px solid ${c.cardBorder}`,
-              boxShadow: c.cardShadow,
-            }}>
-            <FadeIn>
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="h-px w-8" style={{ background: c.goldLine }} />
-                <span className="text-[10px] tracking-[0.5em] uppercase" style={{ color: c.tagText }}>Compatibility · Analysis</span>
-                <div className="h-px w-8" style={{ background: c.goldLine }} />
-              </div>
-              <h2 className={`grad-text ${theme === 'dark' ? 'grad-text-dark' : 'grad-text-light'} font-bold mb-4 tracking-tight`}
-                style={{ fontSize: 'clamp(26px, 3.5vw, 40px)' }}>
-                紫微合盘
-              </h2>
-              <p className="text-sm leading-relaxed mb-8 max-w-lg mx-auto" style={{ color: c.textSecond }}>
-                输入两个人的出生信息，AI 基于紫微斗数体系分析夫妻宫互参、命宫兼容性与三方四正交互，<br className="hidden md:block" />
-                给出感情匹配度、合伙可行性与最佳相处建议。
-              </p>
-              <div className="flex justify-center gap-3 flex-wrap mb-6">
-                {['感情匹配度分析', '合伙创业评估', '亲子缘分解读', '婚前相性评估'].map(item => (
-                  <span key={item} style={{
-                    fontSize: '12px', padding: '5px 14px', borderRadius: '20px',
-                    background: theme === 'dark' ? 'rgba(212,168,67,0.08)' : 'rgba(212,168,67,0.12)',
-                    border: `1px solid ${c.goldLine}`,
-                    color: c.goldSolid,
-                  }}>
-                    {item}
-                  </span>
-                ))}
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                onClick={() => router.push('/heming')}
-                className="px-10 py-3 font-medium text-sm tracking-widest rounded-full"
-                style={{
-                  background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(140,100,20,0.1)',
-                  border: `1px solid ${c.goldLine}`,
-                  color: c.goldSolid,
-                  cursor: 'pointer',
-                }}>
-                开始合盘分析
-              </motion.button>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
       {/* ══ 最终 CTA ══════════════════════════════════════ */}
       <section className="relative z-10 py-40 px-6 text-center" style={{ background: c.altSection }}>
         <FadeIn>
@@ -1012,43 +845,6 @@ export default function HomePage() {
       <footer className="relative z-10 py-10 px-6"
         style={{ borderTop: `1px solid ${c.niCardBord}` }}>
 
-        {/* 4 板块导航占位（已上线 + 即将开放）*/}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="text-[9px] tracking-[0.3em] text-center mb-4 uppercase"
-            style={{ color: c.textMuted, opacity: 0.6 }}>
-            紫微斗数方法论 · 学术体系
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {SECTIONS.map(s => {
-              const ready = s.status === 'ready';
-              return (
-                <a
-                  key={s.key}
-                  href={ready ? '/chart' : undefined}
-                  onClick={ready ? undefined : (e) => e.preventDefault()}
-                  className="rounded-lg px-3 py-3 text-center transition-all"
-                  style={{
-                    background: ready ? c.starBg : 'transparent',
-                    border: `1px ${ready ? 'solid' : 'dashed'} ${ready ? c.goldLine : c.navBorder}`,
-                    cursor: ready ? 'pointer' : 'not-allowed',
-                    opacity: ready ? 1 : 0.5,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <div className="text-base font-semibold mb-0.5 tracking-[0.1em]"
-                    style={{ color: ready ? c.goldSolid : c.textMuted }}>
-                    {s.name}
-                  </div>
-                  <div className="text-[9px] tracking-wider"
-                    style={{ color: ready ? '#10b981' : c.textMuted }}>
-                    {ready ? '✓ 已上线' : `${s.when} 开放`}
-                  </div>
-                </a>
-              );
-            })}
-          </div>
-        </div>
-
         <div className="text-center">
           <p className="text-[10px] tracking-wider mb-3" style={{ color: c.footerText }}>
             紫微命盘 · 仅供参考，命运掌握在自己手中
@@ -1065,6 +861,7 @@ export default function HomePage() {
           </p>
         </div>
       </footer>
+
     </div>
   );
 }
