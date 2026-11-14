@@ -221,7 +221,7 @@ async function handleInterpret(req: Request) {
       try {
         const res = await fetch(ZHIPU_URL, {
           method: 'POST',
-          signal: AbortSignal.timeout(90000),
+          signal: AbortSignal.timeout(300000), // must outlive the whole stream
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
@@ -264,35 +264,90 @@ async function handleInterpret(req: Request) {
     );
   }
 
-  // Buffer the whole upstream SSE payload, translate it, and return it as
-  // one plain response. A streaming ReadableStream response throws a bare
-  // Worker 1101 in the deployed build when the overloaded upstream stalls
-  // or drops mid-stream, outside anything the handler can catch; the
-  // frontend reads a plain body through the same reader loop.
-  let upstreamText: string;
-  try {
-    upstreamText = await upstream.text();
-  } catch (err) {
-    return Response.json(
-      { error: `智谱接口返回数据失败：${err instanceof Error ? err.message : '网络错误'}，请稍后重试。` },
-      { status: 502 },
-    );
-  }
-  const out: string[] = [];
-  for (const line of upstreamText.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith('data:')) continue;
-    const data = trimmed.slice(5).trim();
-    if (data === '[DONE]') continue;
+  // Stream the upstream SSE to the client as it arrives, translating each
+  // OpenAI-style chunk into the shape the frontend reads:
+  // data: {"choices":[{"delta":{"content":"..."}}]} -> data: {"delta":{"text":"..."}}
+  //
+  // Design (2026-11-14, second streaming attempt): the first streaming
+  // version used a hand-rolled ReadableStream with an async pull() that
+  // read the upstream and enqueued translated lines. Deployed, it threw a
+  // bare Worker 1101 outside the handler's try/catch (the diagnostic
+  // build's DIAG wrapper never caught it), while the same code worked in
+  // local workerd against a mock upstream. The failure is in the
+  // pull()/cancel() machinery: if the stream is cancelled while a pull is
+  // awaiting the upstream, the late enqueue() throws inside the async
+  // pull, which surfaces as an uncaught exception in the isolate.
+  // This version uses no pull()/cancel() at all: a TransformStream whose
+  // writable side is fed by a detached, fully-guarded pump. Every await
+  // in the pump is inside try/catch, and the pump's promise has a
+  // trailing .catch(), so no rejection can escape into the isolate. If
+  // the client disconnects, writer.write() rejects and the pump ends
+  // silently. If the upstream drops mid-stream, the pump ends the stream
+  // with a clean [DONE] so the frontend sees a normal end.
+  const upstreamBody = upstream.body;
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const pump = (async () => {
+    const reader = upstreamBody.getReader();
+    let lineBuffer = '';
     try {
-      const text = JSON.parse(data).choices?.[0]?.delta?.content ?? '';
-      if (text) out.push(sse(text));
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split('\n');
+        lineBuffer = lines.pop() ?? '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const data = trimmed.slice(5).trim();
+          if (data === '[DONE]') continue;
+          let text = '';
+          try {
+            text = JSON.parse(data).choices?.[0]?.delta?.content ?? '';
+          } catch {
+            continue;
+          }
+          if (text) await writer.write(encoder.encode(sse(text)));
+        }
+      }
     } catch {
-      // skip partial/garbled lines
+      // Upstream dropped, timed out, or the client went away: fall
+      // through to a clean end below. Nothing escapes the pump.
+    } finally {
+      try {
+        lineBuffer += decoder.decode();
+        const trimmed = lineBuffer.trim();
+        if (trimmed.startsWith('data:')) {
+          const data = trimmed.slice(5).trim();
+          if (data && data !== '[DONE]') {
+            try {
+              const text = JSON.parse(data).choices?.[0]?.delta?.content ?? '';
+              if (text) await writer.write(encoder.encode(sse(text)));
+            } catch {
+              // skip partial/garbled tail
+            }
+          }
+        }
+      } catch {
+        // client gone; ignore
+      }
+      try {
+        await writer.write(encoder.encode('data: [DONE]\n\n'));
+      } catch {
+        // client gone; ignore
+      }
+      try {
+        await writer.close();
+      } catch {
+        // already closed/errored; ignore
+      }
     }
-  }
-  out.push('data: [DONE]\n\n');
-  return new Response(out.join(''), {
+  })();
+  pump.catch(() => {});
+  return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
