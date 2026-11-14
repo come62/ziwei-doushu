@@ -386,6 +386,21 @@ function sse(text: string) {
 }
 
 export async function POST(req: Request) {
+  // Safety net: an uncaught throw anywhere in the handler must surface as
+  // a readable JSON error, never as a bare Worker 1101.
+  try {
+    return await handleInterpret(req);
+  } catch (err) {
+    return Response.json(
+      {
+        error: `DIAG-OUTER: ${err instanceof Error ? err.name + ': ' + err.message : String(err)}`,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+async function handleInterpret(req: Request) {
   const { apiKey, model } = resolveEnv();
   if (!apiKey) {
     return Response.json(
@@ -522,7 +537,9 @@ export async function POST(req: Request) {
       }
     },
     cancel() {
-      reader.cancel();
+      // reader.cancel() rejects if the reader already errored; never let
+      // that rejection escape as an unhandled error in the isolate.
+      reader.cancel().catch(() => {});
     },
   });
 
