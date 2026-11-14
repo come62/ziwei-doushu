@@ -70,8 +70,8 @@ export default function ChartPage() {
         </ChartFit>
       </div>
       {/* 手机：三合 / 飞星 / 四化 放在命盘和对话框之间 */}
-      <div ref={setSlotEl} className="flex-shrink-0 px-3 pt-1 lg:hidden" />
-      <div className="min-h-0 flex-1 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1 lg:flex-none lg:p-0">
+      <div ref={setSlotEl} className="flex-shrink-0 px-3 pt-0 lg:hidden" />
+      <div className="min-h-0 flex-1 px-2 pb-[max(6px,env(safe-area-inset-bottom))] pt-0 lg:flex-none lg:p-0">
         <InsightPanel chart={chart} selectedPalace={selectedPalace} />
       </div>
     </main>
