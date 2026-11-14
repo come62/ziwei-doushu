@@ -92,9 +92,7 @@ export default function PreviewPage() {
             <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>原版 ↗</Link>
             <span>·</span>
             <Link href="/chart" style={{ color: 'inherit', textDecoration: 'none' }}>命盘</Link>
-            <span>·</span>
-            <Link href="/heming" style={{ color: 'inherit', textDecoration: 'none' }}>合盘</Link>
-          </div>
+                      </div>
 
           {/* 时间轴说明 */}
           <div style={{

@@ -298,6 +298,8 @@ npm test            # 排盘引擎回归（768 盘 × 紫微铁律、夏令时�
 
 每次 push 与 PR 都会在 GitHub Actions 上跑同一套（见 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)）。
 
+**Cloudflare Workers 部署**：在 Cloudflare Workers Builds 设置中，生产 Build command 填 `npm run cf:build`、Deploy command 填 `npm run cf:deploy`；若要构建功能分支，另行启用 Preview Builds，并将 Preview Build command 设为 `npm run cf:build`、Preview command 设为 `npm run cf:preview:upload`。本项目保留 `npm run build` 为标准 `next build`；`cf:build` 会先安装 OpenNext Cloudflare 适配器与 Wrangler，再由适配器执行 Next.js 构建并生成 Worker 输出；Cloudflare 的预览命令使用 `upload` 上传已生成的预览产物，不使用会启动本地服务器的 `preview`。保存 Cloudflare 预览构建设置本身不会重跑旧提交；启用或调整设置后，需要向目标功能分支推送一个新提交，才会触发新的预览构建。
+
 > **注意：开源版不含后端 API 路由。**排盘、命盘展示、合盘起盘都在浏览器里用本仓库的引擎完成，**不需要任何 API Key**。AI 解读（`/api/interpret`）和合盘 AI 分析（`/api/heming`）需要你自己实现接口；没实现之前，这两处会直接提示「开源版不含该接口」，配置 API Key 也不会变成可用（#30 就是这个原因）。
 
 ---
@@ -437,3 +439,5 @@ npm test            # 排盘引擎回归（768 盘 × 紫微铁律、夏令时�
 - 线上平台：[ouranic.cn](https://ouranic.cn/?from=gh-readme)（已完成 ICP 备案：京ICP备2026069066号-1）
 - 提问题、提修复：见 [CONTRIBUTING.md](./CONTRIBUTING.md)；使用交流请到 [讨论区](https://github.com/Renhuai123/ziwei-doushu/discussions)
 - 💕 发财的小手点一下：小红书 / 抖音 / 闲鱼 / X 关注 **王多鱼AI**，第一时间看上线 + 解锁更多紫微干货～
+
+ 
