@@ -416,27 +416,59 @@ export async function POST(req: Request) {
   }
   const chartText = JSON.stringify(body.chart).slice(0, MAX_CHART_CHARS);
 
-  const upstream = await fetch(ZHIPU_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      stream: true,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `命盘数据：\n${chartText}` },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ],
-    }),
-  });
-
-  if (!upstream.ok || !upstream.body) {
-    const detail = await upstream.text().catch(() => '');
+  // Overload protection: retry 429/5xx with backoff (1s, 2s), then fall
+  // back to the other free text model. A rejected fetch must not crash
+  // the Worker with a bare 1101: it retries, then returns a JSON error.
+  const candidates = [
+    model,
+    ...['glm-4.7-flash', 'glm-4.5-flash'].filter((m) => m !== model),
+  ];
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  let upstream: Response | null = null;
+  let lastError = '';
+  outer: for (const candidate of candidates) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(ZHIPU_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: candidate,
+            stream: true,
+            messages: [
+              { role: 'system', content: SYSTEM_PROMPT },
+              { role: 'user', content: `命盘数据：\n${chartText}` },
+              ...messages.map((m) => ({ role: m.role, content: m.content })),
+            ],
+          }),
+        });
+        if (res.ok && res.body) {
+          upstream = res;
+          break outer;
+        }
+        const detail = await res.text().catch(() => '');
+        lastError = `智谱接口返回 ${res.status}。${detail.slice(0, 200)}`;
+        if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+          await sleep(1000 * (attempt + 1));
+          continue;
+        }
+        break;
+      } catch (err) {
+        lastError = `智谱接口请求失败：${err instanceof Error ? err.message : '网络错误'}，请稍后重试。`;
+        if (attempt < 2) {
+          await sleep(1000 * (attempt + 1));
+          continue;
+        }
+        break;
+      }
+    }
+  }
+  if (!upstream || !upstream.body) {
     return Response.json(
-      { error: `智谱接口返回 ${upstream.status}。${detail.slice(0, 200)}` },
+      { error: lastError || '智谱接口暂时不可用，请稍后重试。' },
       { status: 502 },
     );
   }
