@@ -6,6 +6,24 @@ import type { ZiweiChart } from '@/lib/ziwei/types';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  error?: boolean;
+  retryable?: boolean;
+}
+
+class ApiError extends Error {
+  constructor(public code: string, public status?: number) { super(code); }
+}
+
+function friendlyError(e: unknown): { text: string; retryable: boolean } {
+  if (e instanceof ApiError) {
+    if (e.code === 'api-missing') {
+      return { text: '开源版不含 AI 解读接口（/api/interpret），需要你自己实现后才能用，详见 README「快速开始」。排盘本身不需要任何 API Key。', retryable: false };
+    }
+    if (e.status === 429 || e.status === 502 || e.status === 503 || e.status === 504) {
+      return { text: '解读服务现在有点繁忙，稍等几秒再点「重试」就好。', retryable: true };
+    }
+  }
+  return { text: '这次解读没有成功，可能是网络或服务临时出了问题，请点「重试」再试一次。', retryable: true };
 }
 
 interface ChatPanelProps {
@@ -26,6 +44,7 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const baseLen = useRef(0); // 最近一轮提问发出后 messages 的长度（含该轮用户消息）
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -36,7 +55,11 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: Message = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
+    // 上一轮失败了：把那一轮整个丢掉，不把报错文字和重复提问发给模型
+    const base = messages.length > 0 && messages[messages.length - 1].error ? messages.slice(0, baseLen.current - 1) : messages;
+    const next = [...base, userMsg];
+    baseLen.current = next.length;
+    setMessages(next);
     setInput('');
     setLoading(true);
 
@@ -44,24 +67,26 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
       const res = await fetch('/api/interpret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chart, messages: [...messages, userMsg] }),
+        body: JSON.stringify({ chart, messages: next.filter(m => !m.error).map(m => ({ role: m.role, content: m.content })) }),
       });
 
-      if (res.status === 404) throw new Error('api-missing');
-      if (!res.ok) throw new Error('请求失败');
-      if (!res.body) throw new Error('无响应流');
+      if (res.status === 404) throw new ApiError('api-missing', 404);
+      if (!res.ok) throw new ApiError('http', res.status);
+      if (!res.body) throw new ApiError('no-body');
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let assistantText = '';
+      let buffer = '';
 
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? ''; // 不完整的一行留到下一块
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
@@ -79,15 +104,24 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
           }
         }
       }
+      if (!assistantText.trim()) throw new ApiError('empty');
     } catch (e) {
-      const missing = e instanceof Error && e.message === 'api-missing';
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: missing ? '开源版不含 AI 解读接口（/api/interpret），需要你自己实现后才能用，详见 README「快速开始」。排盘本身不需要任何 API Key。' : '解读失败，请检查API配置或稍后重试。',
-      }]);
+      const { text: errText, retryable } = friendlyError(e);
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        const keep = last && last.role === 'assistant' && !last.error && last.content === '' ? prev.slice(0, -1) : prev;
+        return [...keep, { role: 'assistant', content: errText, error: true, retryable }];
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  // 重试：重发失败那一轮的提问（sendMessage 会丢掉那一轮的残留和报错）
+  const retry = () => {
+    if (loading) return;
+    const t = messages[baseLen.current - 1]?.content;
+    if (t) sendMessage(t);
   };
 
   return (
@@ -139,6 +173,16 @@ export default function ChatPanel({ chart }: ChatPanelProps) {
                     <span className="inline-block w-1.5 h-3 ml-0.5 animate-pulse" style={{ background: 'var(--t-gold)', opacity: 0.6 }} />
                   )}
                 </div>
+                {msg.error && msg.retryable && i === messages.length - 1 && (
+                  <button
+                    onClick={retry}
+                    disabled={loading}
+                    className="mt-2 px-3 py-1 rounded-lg text-xs font-medium transition-all disabled:opacity-40"
+                    style={{ background: 'rgba(212,168,67,0.15)', border: '1px solid rgba(212,168,67,0.25)', color: 'var(--t-gold)' }}
+                  >
+                    {loading ? '重试中…' : '重试'}
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}

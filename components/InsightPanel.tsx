@@ -8,6 +8,24 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   hidden?: boolean; // don't show user bubble for auto/topic messages
+  error?: boolean; // 失败提示（不发给模型）
+  retryable?: boolean; // 失败提示下是否显示「重试」按钮
+}
+
+class ApiError extends Error {
+  constructor(public code: string, public status?: number) { super(code); }
+}
+
+const MSG_API_MISSING = '开源版不含 AI 解读接口（/api/interpret），需要你自己实现后才能用，详见 README「快速开始」。排盘本身不需要任何 API Key。';
+const MSG_BUSY = '解读服务现在有点繁忙，稍等几秒再点「重试」就好。';
+const MSG_FAIL = '这次解读没有成功，可能是网络或服务临时出了问题，请点「重试」再试一次。';
+
+function friendlyError(e: unknown): { text: string; retryable: boolean } {
+  if (e instanceof ApiError) {
+    if (e.code === 'api-missing') return { text: MSG_API_MISSING, retryable: false };
+    if (e.status === 429 || e.status === 502 || e.status === 503 || e.status === 504) return { text: MSG_BUSY, retryable: true };
+  }
+  return { text: MSG_FAIL, retryable: true };
 }
 
 interface SelectedSiHua {
@@ -193,6 +211,8 @@ export default function InsightPanel({ chart, selectedPalace, selectedSiHua }: I
   const lastPalaceBranch = useRef<number | undefined>(undefined);
   const lastSiHuaKey = useRef<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastRequestRef = useRef<{ role: 'user' | 'assistant'; content: string }[] | null>(null); // 最近一次发给接口的内容，重试用
+  const attemptBaseLen = useRef(0); // 最近一轮提问发出时 messages 的长度（含该轮用户消息）
 
   // Keep refs in sync
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -275,44 +295,64 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
   }, [selectedSiHua]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const streamResponse = async (apiMessages: { role: 'user' | 'assistant'; content: string }[]) => {
+    lastRequestRef.current = apiMessages;
+    let assistantText = '';
+    const applyData = (raw: string) => {
+      try {
+        const delta = JSON.parse(raw).delta?.text ?? '';
+        if (!delta) return;
+        assistantText += delta;
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: assistantText };
+          return updated;
+        });
+      } catch { /* skip */ }
+    };
     try {
       const res = await fetch('/api/interpret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chart, messages: apiMessages }),
       });
-      if (res.status === 404) throw new Error('api-missing');
-      if (!res.ok) throw new Error('请求失败');
-      if (!res.body) throw new Error('无响应流');
+      if (res.status === 404) throw new ApiError('api-missing', 404);
+      if (!res.ok) throw new ApiError('http', res.status);
+      if (!res.body) throw new ApiError('no-body');
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let assistantText = '';
+      let buffer = '';
+      let finished = false;
 
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-      while (true) {
+      while (!finished) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split('\n')) {
+        buffer += decoder.decode(value, { stream: true });
+        // 一行可能被拆在两个数据块里：只处理完整的行，剩下的留到下一块
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') break;
-          try {
-            const delta = JSON.parse(data).delta?.text ?? '';
-            assistantText += delta;
-            setMessages(prev => {
-              const updated = [...prev];
-              updated[updated.length - 1] = { role: 'assistant', content: assistantText };
-              return updated;
-            });
-          } catch { /* skip */ }
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') { finished = true; break; }
+          applyData(data);
         }
       }
+      if (!finished && buffer.startsWith('data: ')) {
+        const data = buffer.slice(6).trim();
+        if (data && data !== '[DONE]') applyData(data);
+      }
+      // 流正常结束但一个字都没有：当作失败，别留一片空白
+      if (!assistantText.trim()) throw new ApiError('empty');
     } catch (e) {
-      const missing = e instanceof Error && e.message === 'api-missing';
-      setMessages(prev => [...prev, { role: 'assistant', content: missing ? '开源版不含 AI 解读接口（/api/interpret），需要你自己实现后才能用，详见 README「快速开始」。排盘本身不需要任何 API Key。' : '解读失败，请稍后重试。' }]);
+      const { text, retryable } = friendlyError(e);
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        const base = last && last.role === 'assistant' && !last.error && last.content === '' ? prev.slice(0, -1) : prev;
+        return [...base, { role: 'assistant', content: text, error: true, retryable }];
+      });
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -325,15 +365,25 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
     setLoading(true);
 
     const userMsg: Message = { role: 'user', content: text, hidden };
-    // Capture current messages synchronously via ref (avoids stale closure)
-    const apiMessages = [...messagesRef.current, userMsg].map(m => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const cur = messagesRef.current;
+    // 上一轮失败了：把那一轮（提问、残留内容、报错）整个丢掉，免得把报错文字和重复提问发给模型
+    const base = cur.length > 0 && cur[cur.length - 1].error ? cur.slice(0, attemptBaseLen.current - 1) : cur;
+    const next = [...base, userMsg];
+    attemptBaseLen.current = next.length;
+    const apiMessages = next.filter(m => !m.error).map(m => ({ role: m.role, content: m.content }));
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(next);
     setInput('');
     streamResponse(apiMessages);
+  };
+
+  // 重试：丢掉失败那一轮的残留和报错，原样重发上一次的请求
+  const handleRetry = () => {
+    if (loadingRef.current || !lastRequestRef.current) return;
+    loadingRef.current = true;
+    setLoading(true);
+    setMessages(prev => prev.slice(0, attemptBaseLen.current));
+    streamResponse(lastRequestRef.current);
   };
 
   const handleTopicClick = (topicKey: string) => {
@@ -410,8 +460,37 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
               );
             }
 
-            // Assistant message
             const isLastMsg = i === messages.length - 1;
+
+            // 失败提示 + 重试按钮
+            if (msg.error) {
+              return (
+                <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+                  <div
+                    className="rounded-lg px-3 py-2.5 text-[11px] leading-relaxed"
+                    style={{ background: 'var(--t-card)', border: '1px solid var(--t-border)', color: 'var(--t-text2)' }}
+                  >
+                    <div>{msg.content}</div>
+                    {msg.retryable && isLastMsg && (
+                      <button
+                        onClick={handleRetry}
+                        disabled={loading}
+                        className="mt-2 px-3 py-1 rounded-lg text-[11px] font-medium transition-all disabled:opacity-40"
+                        style={{
+                          background: 'rgba(212,168,67,0.15)',
+                          border: '1px solid rgba(212,168,67,0.25)',
+                          color: 'var(--t-gold)',
+                        }}
+                      >
+                        {loading ? '重试中…' : '重试'}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            }
+
+            // Assistant message
             return (
               <motion.div
                 key={i}
