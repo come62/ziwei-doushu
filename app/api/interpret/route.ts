@@ -44,22 +44,28 @@
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
 // derivable (palace whose stem == lunarInfo.yearStem).
-// Fix 2026-11-14: first live test 500'd on GET and POST (module-scope
-// process.env access crashes under the Next edge runtime on Workers).
-// Env is now read inside the handler via getCloudflareContext().env.
+// Fix 2026-11-14: first live test 500'd on GET and POST. Root cause was
+// `export const runtime = 'edge'`: Next emits an edge-runtime route as a
+// separate edge bundle, which the @opennextjs/cloudflare adapter drops
+// from its output (manifest still lists the route, so requests 500).
+// The runtime export was removed; env is read inside the handler via
+// getCloudflareContext().env, the adapter's documented way.
 
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-export const runtime = 'edge';
+// NOTE: do NOT add `export const runtime = 'edge'` here. An edge-runtime
+// route is emitted by Next as a separate edge bundle, which the
+// @opennextjs/cloudflare adapter drops from its output (the manifest still
+// lists the route, so every request 500s). The default runtime is converted
+// to Workers by the adapter, like every other route in this app.
 
 const ZHIPU_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flash';
 
-// Workers-safe env access (fix 2026-11-14): reading process.env at module
-// scope crashes this route under the Next edge runtime on Workers (GET and
-// POST both 500 before any handler runs). Secrets bound in the Cloudflare
-// dashboard are read via getCloudflareContext().env inside the handler;
-// the guarded process.env fallback keeps plain `next dev` working.
+// Workers-safe env access: secrets bound in the Cloudflare dashboard are
+// read via getCloudflareContext().env inside the handler (the adapter's
+// documented way); the guarded process.env fallback keeps plain
+// `next dev` working.
 function resolveEnv(): { apiKey: string | undefined; model: string } {
   try {
     const { env } = getCloudflareContext();
