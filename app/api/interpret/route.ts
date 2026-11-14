@@ -477,27 +477,48 @@ export async function POST(req: Request) {
   // data: {"choices":[{"delta":{"content":"..."}}]}  ->  data: {"delta":{"text":"..."}}
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  let lineBuffer = '';
+  // One upstream SSE line -> the text it carries ('' when it carries none).
+  // Lines split across chunks are held in lineBuffer until complete.
+  function textFromLine(line: string): string {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) return '';
+    const data = trimmed.slice(5).trim();
+    if (data === '[DONE]') return '';
+    try {
+      return JSON.parse(data).choices?.[0]?.delta?.content ?? '';
+    } catch {
+      return '';
+    }
+  }
   const stream = new ReadableStream({
     async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
-        controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+      let readResult: Awaited<ReturnType<typeof reader.read>>;
+      try {
+        readResult = await reader.read();
+      } catch {
+        // Upstream dropped mid-stream (e.g. overloaded): end the stream
+        // cleanly so the frontend sees a normal end, not a Worker 1101.
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
         return;
       }
-      const chunk = decoder.decode(value, { stream: true });
-      for (const line of chunk.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
-        const data = trimmed.slice(5).trim();
-        if (data === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(data);
-          const text = parsed.choices?.[0]?.delta?.content ?? '';
-          if (text) controller.enqueue(new TextEncoder().encode(sse(text)));
-        } catch {
-          // skip partial lines; the decoder's streaming handles the rest
-        }
+      const { done, value } = readResult;
+      if (done) {
+        const tail = textFromLine(lineBuffer);
+        if (tail) controller.enqueue(encoder.encode(sse(tail)));
+        lineBuffer = '';
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+        return;
+      }
+      lineBuffer += decoder.decode(value, { stream: true });
+      const lines = lineBuffer.split('\n');
+      lineBuffer = lines.pop() ?? '';
+      for (const line of lines) {
+        const text = textFromLine(line);
+        if (text) controller.enqueue(encoder.encode(sse(text)));
       }
     },
     cancel() {
