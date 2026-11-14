@@ -3,6 +3,7 @@ import { useState } from 'react';
 import BirthForm from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import InsightPanel from '@/components/InsightPanel';
+import ChartFit from '@/components/ChartFit';
 import { generateChart } from '@/lib/ziwei/algorithm';
 import type { BirthInfo, ZiweiChart, Palace } from '@/lib/ziwei/types';
 
@@ -36,27 +37,25 @@ export default function ChartPage() {
   }
 
   // ── 已起盘：命盘 + 解读 ──
+  // 手机：整屏固定，上半屏命盘（可放大），下半屏解读 + 选项 + 追问输入框
+  // 电脑：左右两栏。InsightPanel 只挂载一次（避免重复请求 AI）
   return (
-    <main style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 16px' }}>
-      <button
-        type="button"
-        onClick={() => { setChart(null); setSelectedPalace(null); }}
-        style={{
-          marginBottom: 16, padding: '6px 14px', cursor: 'pointer',
-          border: '1px solid #ccc', borderRadius: 8, background: 'transparent',
-        }}
-      >
-        ← 重新起盘
-      </button>
-
-      {/* 本命 / 大限 / 流年 导航已在 ChartBoard 内部，这里不再重复放一份 */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]"
-        style={{
-          gap: 20, marginTop: 16, alignItems: 'start',
-        }}
-      >
-        <ChartBoard chart={chart} onPalaceSelect={setSelectedPalace} />
+    <main className="flex h-[100dvh] flex-col overflow-hidden lg:mx-auto lg:grid lg:h-auto lg:max-w-[1280px] lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-5 lg:overflow-visible lg:px-4 lg:py-6">
+      <div className="flex-shrink-0 px-3 py-1.5 lg:col-span-2 lg:px-0">
+        <button
+          type="button"
+          onClick={() => { setChart(null); setSelectedPalace(null); }}
+          style={{ padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
+        >
+          ← 重新起盘
+        </button>
+      </div>
+      <div className="h-[calc(50dvh-40px)] flex-shrink-0 lg:h-auto">
+        <ChartFit>
+          <ChartBoard chart={chart} onPalaceSelect={setSelectedPalace} />
+        </ChartFit>
+      </div>
+      <div className="min-h-0 flex-1 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-1 lg:flex-none lg:p-0">
         <InsightPanel chart={chart} selectedPalace={selectedPalace} />
       </div>
     </main>
