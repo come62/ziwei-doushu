@@ -90,9 +90,9 @@ export default function ChartPage() {
     <button
       type="button"
       onClick={openEdit}
-      style={{ padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
+      style={{ padding: '4px 12px', fontSize: 14, lineHeight: '20px', minWidth: 84, textAlign: 'center', whiteSpace: 'nowrap', cursor: 'pointer', border: '1px solid rgba(176,141,70,0.6)', borderRadius: 999, background: '#fff', color: '#5b3a1a' }}
     >
-      ✎ 修改时辰
+      修改时辰
     </button>
   );
 
