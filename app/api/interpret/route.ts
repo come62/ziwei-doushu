@@ -39,7 +39,7 @@
 //    or KV-backed limit) is still TODO before opening it to everyone.
 // System prompt: Claude's interpret guide, embedded verbatim below
 // (~/workspace/ziwei-patch-20261112/interpret-guide/ziwei-interpret-guide.md,
-// 46 lines: slimmed 2026-11-14 from 269 for speed, +1 verbatim-copy rule after the model misread 阴男/命宫酉, +1 opening-format rule with the summary line, +3 accuracy rules merged into existing lines 2026-11-14 (palace-name field, borrow-only-if-empty, brackets hold major stars only; Bai's order), zero 倪海厦 mentions.)
+// 46 lines: slimmed 2026-11-14 from 269 for speed, +1 verbatim-copy rule after the model misread 阴男/命宫酉, +1 opening-format rule with the summary line, +3 accuracy rules merged into existing lines 2026-11-14 (palace-name field, borrow-only-if-empty, brackets hold major stars only), +1 opposite-palace-field rule 2026-11-14 (use only the route-computed 对宫 field; Bai's order), zero 倪海厦 mentions.)
 // Known gap (told to Bai 2026-11-13): 十二神, 流昌/流曲/小昌/小曲, 流年叠加
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
@@ -61,6 +61,8 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 const ZHIPU_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 const DEFAULT_MODEL = 'glm-4.7-flash';
+
+const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
 // Workers-safe env access: secrets bound in the Cloudflare dashboard are
 // read via getCloudflareContext().env inside the handler (the adapter's
@@ -126,7 +128,7 @@ const SYSTEM_PROMPT = `# 紫微斗数命盘解读指南
 ## 读盘要点
 - 亮度：庙>旺>得>利>平>不>陷。亮度只影响"发挥得好不好"，不改变星的性质。
 - 煞星（羊陀火铃空劫）同宫不等于凶：强主星加煞常是"有冲劲但要控脾气"。
-- 空宫（没有主星）才借对宫主星看，力度减弱；本宫有主星时直接写本宫主星，不说"借对宫"。身宫表示中年后的人生重心。
+- 空宫（没有主星）才借对宫主星看，力度减弱；本宫有主星时直接写本宫主星，不说"借对宫"。借对宫时，对宫只能用数据里写明的"对宫"字段，不得自行推断。身宫表示中年后的人生重心。
 - 看一个宫必须看三方四正：本宫、对宫（影响最直接）、两个三合宫。看命宫必带财帛、官禄、迁移。
 - 主星看组合，要说出两颗星合在一起的味道。
 
@@ -177,6 +179,55 @@ export async function POST(req: Request) {
   }
 }
 
+// Opposite-palace + 三方四正 enrichment (2026-11-14, Bai's order):
+// the model borrowed the WRONG opposite palace for 迁移宫 (wrote 夫妻宫;
+// the true opposite of 卯 is 酉/命宫), so the route now computes these
+// from branch indexes and writes them into the chart data in plain sight,
+// instead of leaving the model to infer them. palaces[] is sorted by
+// branch 0-11, so palace i's opposite is palace (i+6)%12. For 命宫 the
+// three 三方四正 palaces are 财帛 (+8), 官禄 (+4), 迁移 (+6) by the
+// engine's fixed palace order; the field is only added when the names
+// at those indexes actually contain 财帛/官禄/迁移, so a mismatch can
+// never produce a wrong label. Names are always read from the data,
+// never hardcoded. Any unexpected shape -> return the chart untouched.
+function enrichChart(chart: unknown): unknown {
+  try {
+    const rec = chart as Record<string, unknown>;
+    const palaces = rec.palaces;
+    if (!Array.isArray(palaces) || palaces.length !== 12) return chart;
+    const names: string[] = [];
+    for (const p of palaces) {
+      const r = p as Record<string, unknown> | null;
+      if (!r || typeof r.name !== 'string' || !r.name) return chart;
+      names.push(r.name);
+    }
+    const enriched = palaces.map((p, i) => {
+      const opp = (i + 6) % 12;
+      const copy = { ...(p as Record<string, unknown>) };
+      copy['对宫'] = `${names[opp]}（${BRANCHES[opp]}）`;
+      return copy;
+    });
+    const ming = rec.mingGongBranch;
+    if (typeof ming === 'number' && Number.isInteger(ming) && ming >= 0 && ming < 12) {
+      const caiBo = (ming + 8) % 12;
+      const guanLu = (ming + 4) % 12;
+      const qianYi = (ming + 6) % 12;
+      if (
+        names[caiBo].includes('财帛') &&
+        names[guanLu].includes('官禄') &&
+        names[qianYi].includes('迁移')
+      ) {
+        const mingPalace = enriched[ming] as Record<string, unknown>;
+        mingPalace['三方四正'] =
+          `财帛 ${names[caiBo]}（${BRANCHES[caiBo]}）、官禄 ${names[guanLu]}（${BRANCHES[guanLu]}）、迁移 ${names[qianYi]}（${BRANCHES[qianYi]}）`;
+      }
+    }
+    return { ...rec, palaces: enriched };
+  } catch {
+    return chart;
+  }
+}
+
 async function handleInterpret(req: Request) {
   const { apiKey, model } = resolveEnv();
   if (!apiKey) {
@@ -206,14 +257,13 @@ async function handleInterpret(req: Request) {
   if (messages.some((m) => typeof m.content !== 'string' || m.content.length > 4000)) {
     return Response.json({ error: '提问过长。' }, { status: 400 });
   }
-  const chartText = JSON.stringify(body.chart).slice(0, MAX_CHART_CHARS);
+  const chartText = JSON.stringify(enrichChart(body.chart)).slice(0, MAX_CHART_CHARS);
 
   // Summary line (2026-11-14, Bai's order + Claude's suggestion): the
   // small model misread or skipped the palace branches buried in the
   // chart JSON, so the four facts the guide's verbatim-copy rule needs
   // are computed from the posted chart and put first, in plain sight.
   // Filled from actual data, never hardcoded; missing fields are skipped.
-  const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
   const chartRec = body.chart as Record<string, unknown>;
   const summaryParts: string[] = [];
   if (typeof chartRec.yinYangGender === 'string' && chartRec.yinYangGender) {
