@@ -114,7 +114,7 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
   };
 
   const zoomBtn: React.CSSProperties = {
-    padding: '4px 12px', fontSize: 14, borderRadius: 999, cursor: 'pointer',
+    padding: '4px 12px', fontSize: 14, lineHeight: '20px', minWidth: 84, textAlign: 'center', whiteSpace: 'nowrap', borderRadius: 999, cursor: 'pointer',
     border: '1px solid rgba(176,141,70,0.6)', background: '#fff', color: '#5b3a1a',
   };
 

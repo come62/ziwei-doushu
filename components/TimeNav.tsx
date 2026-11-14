@@ -131,7 +131,7 @@ export default function TimeNav({
         >
           <button
             onClick={() => onViewChange('liunian')}
-            className="font-medium flex-1 text-center"
+            className="font-medium flex-1 text-center whitespace-nowrap"
             style={{ ...fs(3.4, 11), color: view === 'liunian' ? GOLD : INACTIVE }}
           >
             流年
