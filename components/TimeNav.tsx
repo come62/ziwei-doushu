@@ -14,6 +14,8 @@ interface TimeNavProps {
   onYearChange: (year: number) => void;
   displayMode: ChartDisplayMode;
   onDisplayModeChange: (mode: ChartDisplayMode) => void;
+  /** 手机：三合/飞星/四化 这一行由外面单独摆放，这里不再渲染 */
+  hideModeRow?: boolean;
 }
 
 /** 由年份计算天干索引 (0-9) */
@@ -57,6 +59,7 @@ export default function TimeNav({
   onYearChange,
   displayMode,
   onDisplayModeChange,
+  hideModeRow,
 }: TimeNavProps) {
   const currentDx = chart.daXians[chart.currentDaXianIndex];
 
@@ -88,15 +91,9 @@ export default function TimeNav({
   const overlayInfo = getOverlayInfo();
 
   return (
-    <div className="mb-3 [container-type:inline-size]">
+    <div className="mb-1.5 [container-type:inline-size]">
       {/* 盘面模式：与本命/大限/流年时间层级独立 */}
-      <div className="flex items-center rounded-xl p-1 gap-1 mb-2" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        {([
-          ['sanhe', '三合'], ['feixing', '飞星'], ['sihua', '四化'],
-        ] as const).map(([mode, label]) => (
-          <TabButton key={mode} active={displayMode === mode} onClick={() => onDisplayModeChange(mode)}>{label}</TabButton>
-        ))}
-      </div>
+      {!hideModeRow && <ModeBar displayMode={displayMode} onChange={onDisplayModeChange} />}
       {/* Tab 行 */}
       <div
         className="flex items-center rounded-xl p-1 gap-1"
@@ -224,5 +221,26 @@ function TabButton({
     >
       {children}
     </button>
+  );
+}
+
+/** 三合 / 飞星 / 四化 切换行（可单独放在命盘外面，保持正常大小） */
+export function ModeBar({
+  displayMode,
+  onChange,
+}: {
+  displayMode: ChartDisplayMode;
+  onChange: (mode: ChartDisplayMode) => void;
+}) {
+  return (
+    <div className="[container-type:inline-size]">
+      <div className="flex items-center rounded-xl p-1 gap-1 mb-2" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        {([
+          ['sanhe', '三合'], ['feixing', '飞星'], ['sihua', '四化'],
+        ] as const).map(([mode, label]) => (
+          <TabButton key={mode} active={displayMode === mode} onClick={() => onChange(mode)}>{label}</TabButton>
+        ))}
+      </div>
+    </div>
   );
 }

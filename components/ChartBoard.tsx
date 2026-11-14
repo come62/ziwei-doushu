@@ -1,6 +1,7 @@
 'use client';
 import chartBg from './chart-bg.webp';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace, Star, SelfSihuaMark } from '@/lib/ziwei/types';
 import { getSiHuaByStem, getYearBranchIndex } from '@/lib/ziwei/sihua';
@@ -8,13 +9,15 @@ import { BRANCHES, STEMS, PALACE_NAMES_ORDER } from '@/lib/ziwei/constants';
 import { calculateTrueSolarTime, formatTrueSolarClock, formatSignedMinutes, shiftGregorianDate } from '@/lib/ziwei/true-solar-time';
 import { boshiShenName, jiangQianShenName, suiQianShenName } from '@/lib/ziwei/shier-shen';
 import PalaceCell from './PalaceCell';
-import TimeNav, { type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
+import TimeNav, { ModeBar, type TimeView, type ChartDisplayMode, getYearStemIndex, buildSiHuaOverlay } from './TimeNav';
 
 interface ChartBoardProps {
   chart: ZiweiChart;
   onStarSelect?: (star: Star, palace: Palace) => void;
   onPalaceSelect?: (palace: Palace) => void;
   onSiHuaClick?: (starName: string, siHua: string, view: TimeView) => void;
+  /** 手机：把「三合/飞星/四化」这一行放到这个容器里（命盘外面） */
+  modeBarContainer?: HTMLElement | null;
 }
 
 const BRANCH_GRID_POS: Record<number, [number, number]> = {
@@ -95,8 +98,8 @@ const SIHUA_ARROW_COLORS: Record<string, string> = {
 };
 const SIHUA_LETTER: Record<string, string> = { '禄': 'A', '权': 'B', '科': 'C', '忌': 'D' };
 const LETTER_RED = '#9b2c1d'; // 四化页的线条/字母颜色（和原版一致的深红）
-const OUTER_PAD = 18; // 盘外留白（px），给外箭头用
-const LABEL_PAD = 24; // 再往外一圈（px），给方位字用
+const OUTER_PAD = 12; // 盘外留白（px），给外箭头用
+const LABEL_PAD = 16; // 再往外一圈（px），给方位字用
 
 // 方位字：十二宫对应的方位，位置按 4x4 网格的百分比（上下边按横向、左右边按纵向）
 const DIRECTION_TOP: [string, number][] = [['正南方', 41.25], ['南偏西', 58.75]];       // 午、未
@@ -154,7 +157,7 @@ function arrowShape(dir: [number, number], color: string, offset: number, gap: n
   );
 }
 
-export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick }: ChartBoardProps) {
+export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHuaClick, modeBarContainer }: ChartBoardProps) {
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [timeView, setTimeView] = useState<TimeView>('mingpan');
   const [displayMode, setDisplayMode] = useState<ChartDisplayMode>('sanhe');
@@ -375,7 +378,12 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
         onYearChange={setLiunianYear}
         displayMode={displayMode}
         onDisplayModeChange={mode => { setDisplayMode(mode); setSelectedBranch(null); }}
+        hideModeRow={!!modeBarContainer}
       />
+      {modeBarContainer && createPortal(
+        <ModeBar displayMode={displayMode} onChange={mode => { setDisplayMode(mode); setSelectedBranch(null); }} />,
+        modeBarContainer,
+      )}
 
       {/* 背景图容器：标题 + 命盘 */}
       <div
@@ -383,7 +391,7 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
           position: 'relative',
           backgroundColor: '#fdf5e1',
           borderRadius: 10,
-          padding: '5% 3.5% 6.5%',
+          padding: '3% 1.5% 3.5%',
         }}
       >
       {/* 背景图层：仅背景图 40% 透明（opacity 0.6），文字和宫格不受影响 */}
@@ -826,14 +834,29 @@ export default function ChartBoard({ chart, onStarSelect, onPalaceSelect, onSiHu
       </div>
       </div>
 
+
+      {/* 图例（手机）：放在命盘背景右下角 */}
+      <div
+        className="lg:hidden"
+        style={{ position: 'absolute', right: '3%', bottom: '1.2%', zIndex: 2, display: 'flex', gap: 8 }}
+      >
+        {[
+          { h: '化禄', c: 'text-emerald-600 border-emerald-600/50' },
+          { h: '化权', c: 'text-purple-600 border-purple-600/50' },
+          { h: '化科', c: 'text-blue-600 border-blue-600/50' },
+          { h: '化忌', c: 'text-red-600 border-red-600/50' },
+        ].map(({ h, c }) => (
+          <span key={h} className={`border rounded-full font-medium ${c}`} style={{ fontSize: 17, padding: '1px 10px', background: 'rgba(255,255,255,0.7)' }}>{h}</span>
+        ))}
+      </div>
       </div>
 
-      {/* 图例 */}
+      {/* 图例（电脑） */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
-        className="mt-3 flex items-center justify-center gap-2 text-[10px] flex-wrap"
+        className="mt-3 hidden lg:flex items-center justify-center gap-2 text-[10px] flex-wrap"
       >
         {[
           { h: '化禄', c: 'text-emerald-500 border-emerald-500/30' },

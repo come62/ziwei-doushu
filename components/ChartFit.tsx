@@ -3,8 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 const VIRTUAL_W = 800;   // 手机上命盘按这个宽度排版（比例和电脑版一致），再整体缩小到屏宽
 const ZOOM_VW = 560;     // 放大后命盘按这个更窄的宽度重新排版，再刚好铺满手机宽度（字更大），只需上下滑动
-const FILL = 0.96;       // 命盘占屏宽的比例（左右各留一点白）
-const MAX_H = 0.56;      // 命盘区域最多占屏高的比例
+const FILL = 0.98;       // 命盘占屏宽的比例（左右各留一点白）
+const MAX_H = 0.5;       // 命盘区域最多占屏高的比例
 
 /**
  * 手机：命盘铺满屏宽（约 96%），高度按命盘实际比例，最多占屏高 56%；
