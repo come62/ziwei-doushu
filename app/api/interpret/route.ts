@@ -39,7 +39,7 @@
 //    or KV-backed limit) is still TODO before opening it to everyone.
 // System prompt: Claude's interpret guide, embedded verbatim below
 // (~/workspace/ziwei-patch-20261112/interpret-guide/ziwei-interpret-guide.md,
-// 45 lines, slimmed 2026-11-14 from 269 for speed + 1 verbatim-copy rule added 2026-11-14 after the model misread 阴男/命宫酉, zero 倪海厦 mentions.)
+// 46 lines: slimmed 2026-11-14 from 269 for speed, +1 verbatim-copy rule after the model misread 阴男/命宫酉, +1 opening-format rule with the summary line (Bai's order 2026-11-14), zero 倪海厦 mentions.)
 // Known gap (told to Bai 2026-11-13): 十二神, 流昌/流曲/小昌/小曲, 流年叠加
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
@@ -116,6 +116,7 @@ const SYSTEM_PROMPT = `# 紫微斗数命盘解读指南
 ## 铁律
 1. 不自己排盘、不重算、不查表。星曜、亮度、四化、大限、宫名全以输入为准；数据没有就说"盘面数据里没有显示"，绝不编造。
    开头必须逐字照抄输入里的阴阳男女（阴男/阳男/阴女/阳女）、五行局、命宫地支、身宫地支，不得改写、不得凭印象推断；写完自查一遍是否与输入一致。
+   解读开头必须按"命宫在X宫（主星）、身宫在X宫（主星）"的格式写出摘要里的地支。
 2. 每个结论必须指到具体的宫、星、四化，不写放之四海皆准的套话。
 3. 只说倾向，用"容易""倾向于""要留意"，禁用"一定""必然""注定"。
 4. 不预测：死亡寿命、具体疾病、怀孕、具体投资标的、官司输赢。健康/财务/法律只谈"需要留意的方面"，建议咨询专业人士。
@@ -207,6 +208,30 @@ async function handleInterpret(req: Request) {
   }
   const chartText = JSON.stringify(body.chart).slice(0, MAX_CHART_CHARS);
 
+  // Summary line (2026-11-14, Bai's order + Claude's suggestion): the
+  // small model misread or skipped the palace branches buried in the
+  // chart JSON, so the four facts the guide's verbatim-copy rule needs
+  // are computed from the posted chart and put first, in plain sight.
+  // Filled from actual data, never hardcoded; missing fields are skipped.
+  const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+  const chartRec = body.chart as Record<string, unknown>;
+  const summaryParts: string[] = [];
+  if (typeof chartRec.yinYangGender === 'string' && chartRec.yinYangGender) {
+    summaryParts.push(`阴阳：${chartRec.yinYangGender}`);
+  }
+  if (typeof chartRec.wuxingJuName === 'string' && chartRec.wuxingJuName) {
+    summaryParts.push(`五行局：${chartRec.wuxingJuName}`);
+  }
+  const mingBranch = chartRec.mingGongBranch;
+  if (typeof mingBranch === 'number' && Number.isInteger(mingBranch) && mingBranch >= 0 && mingBranch < 12) {
+    summaryParts.push(`命宫：${BRANCHES[mingBranch]}宫`);
+  }
+  const shenBranch = chartRec.shenGongBranch;
+  if (typeof shenBranch === 'number' && Number.isInteger(shenBranch) && shenBranch >= 0 && shenBranch < 12) {
+    summaryParts.push(`身宫：${BRANCHES[shenBranch]}宫`);
+  }
+  const chartSummary = summaryParts.length > 0 ? `命盘摘要：${summaryParts.join('，')}\n` : '';
+
   // Overload protection: retry 429/5xx with backoff (1s, 2s), then fall
   // back to the other free text model. A rejected fetch must not crash
   // the Worker with a bare 1101: it retries, then returns a JSON error.
@@ -232,7 +257,7 @@ async function handleInterpret(req: Request) {
             stream: true,
             messages: [
               { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content: `命盘数据：\n${chartText}` },
+              { role: 'user', content: `${chartSummary}命盘数据：\n${chartText}` },
               ...messages.map((m) => ({ role: m.role, content: m.content })),
             ],
           }),
