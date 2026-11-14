@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import BirthForm from '@/components/BirthForm';
+import BirthForm, { type BirthFormState } from '@/components/BirthForm';
 import ChartBoard from '@/components/ChartBoard';
 import InsightPanel from '@/components/InsightPanel';
 import ChartFit from '@/components/ChartFit';
@@ -28,6 +28,24 @@ export default function ChartPage() {
   const [selectedPalace, setSelectedPalace] = useState<Palace | null>(null);
   const [slotEl, setSlotEl] = useState<HTMLDivElement | null>(null); // 命盘下面放「三合/飞星/四化」的位置
   const [isMobile, setIsMobile] = useState(false);
+  const [formData, setFormData] = useState<BirthFormState | null>(null); // 记住填过的生辰，「修改时辰」时回填
+  const [editing, setEditing] = useState(false);
+
+  // 手机「返回」键：修改时辰界面 → 回到命盘
+  useEffect(() => {
+    if (!editing) return;
+    const onPop = () => setEditing(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [editing]);
+  const openEdit = () => {
+    try { window.history.pushState({ zwEdit: 1 }, ''); } catch { /* ignore */ }
+    setEditing(true);
+  };
+  const closeEdit = () => {
+    if (window.history.state?.zwEdit) window.history.back();
+    else setEditing(false);
+  };
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)');
     const on = () => setIsMobile(mq.matches);
@@ -37,7 +55,7 @@ export default function ChartPage() {
   }, []);
 
   // ── 未起盘：展示出生信息表单 ──
-  if (!chart) {
+  if (!chart || editing) {
     return (
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '48px 20px' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>紫微斗数排盘</h1>
@@ -46,7 +64,24 @@ export default function ChartPage() {
           <br />
           （本页为引擎 Demo，完整商业版界面不在开源范围；排盘内核完全开放。）
         </p>
-        <BirthForm onSubmit={(info: BirthInfo) => setChart(generateChart(info))} />
+        {chart && editing && (
+          <button
+            type="button"
+            onClick={closeEdit}
+            style={{ marginBottom: 16, padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
+          >
+            ← 返回命盘
+          </button>
+        )}
+        <BirthForm
+          initialData={formData ?? undefined}
+          onFormSave={setFormData}
+          onSubmit={(info: BirthInfo) => {
+            setChart(generateChart(info));
+            setSelectedPalace(null);
+            if (editing) closeEdit();
+          }}
+        />
       </main>
     );
   }
@@ -54,10 +89,10 @@ export default function ChartPage() {
   const backBtn = (
     <button
       type="button"
-      onClick={() => { setChart(null); setSelectedPalace(null); }}
+      onClick={openEdit}
       style={{ padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
     >
-      ← 重新起盘
+      ✎ 修改时辰
     </button>
   );
 
