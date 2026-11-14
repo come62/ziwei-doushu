@@ -1,4 +1,5 @@
-// DRAFT — not pushed, not in the repo. Prepared 2026-11-14 for Bai's decision.
+// Live at app/api/interpret/route.ts on feature/cf-test (pushed 2026-11-14,
+// commit 56269bb). Prepared 2026-11-14 for Bai's decision.
 // Bai chose Zhipu international (z.ai) after Google's free tier was blocked
 // for his project ("cannot use the free tier" flag in AI Studio).
 // Target location if he says yes: app/api/interpret/route.ts on feature/cf-test,
@@ -43,13 +44,42 @@
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
 // derivable (palace whose stem == lunarInfo.yearStem).
-// NOT type-checked, NOT live-tested. Typecheck + live-test on the preview
-// after Bai sets the secret.
+// Fix 2026-11-14: first live test 500'd on GET and POST (module-scope
+// process.env access crashes under the Next edge runtime on Workers).
+// Env is now read inside the handler via getCloudflareContext().env.
+
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export const runtime = 'edge';
 
 const ZHIPU_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
-const MODEL = process.env.ZHIPU_MODEL || 'glm-4.7-flash';
+const DEFAULT_MODEL = 'glm-4.7-flash';
+
+// Workers-safe env access (fix 2026-11-14): reading process.env at module
+// scope crashes this route under the Next edge runtime on Workers (GET and
+// POST both 500 before any handler runs). Secrets bound in the Cloudflare
+// dashboard are read via getCloudflareContext().env inside the handler;
+// the guarded process.env fallback keeps plain `next dev` working.
+function resolveEnv(): { apiKey: string | undefined; model: string } {
+  try {
+    const { env } = getCloudflareContext();
+    const record = env as unknown as Record<string, unknown>;
+    const apiKey = record.ZHIPU_API_KEY;
+    const model = record.ZHIPU_MODEL;
+    if (typeof apiKey === 'string' && apiKey) {
+      return {
+        apiKey,
+        model: typeof model === 'string' && model ? model : DEFAULT_MODEL,
+      };
+    }
+  } catch {
+    // Not running under the Cloudflare adapter (e.g. local `next dev`).
+  }
+  const procEnv = (
+    globalThis as { process?: { env?: Record<string, string | undefined> } }
+  ).process?.env;
+  return { apiKey: procEnv?.ZHIPU_API_KEY, model: procEnv?.ZHIPU_MODEL || DEFAULT_MODEL };
+}
 // Keep the chart payload bounded: a full chart JSON is large. 12k chars is
 // plenty for the palace/star data the prompt needs.
 const MAX_CHART_CHARS = 12000;
@@ -350,7 +380,7 @@ function sse(text: string) {
 }
 
 export async function POST(req: Request) {
-  const apiKey = process.env.ZHIPU_API_KEY;
+  const { apiKey, model } = resolveEnv();
   if (!apiKey) {
     return Response.json(
       { error: 'AI 解读未配置：请在 Cloudflare 环境变量里设置 ZHIPU_API_KEY。' },
@@ -387,7 +417,7 @@ export async function POST(req: Request) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model,
       stream: true,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
