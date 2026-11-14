@@ -446,6 +446,7 @@ async function handleInterpret(req: Request) {
       try {
         const res = await fetch(ZHIPU_URL, {
           method: 'POST',
+          signal: AbortSignal.timeout(90000),
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${apiKey}`,
@@ -488,62 +489,35 @@ async function handleInterpret(req: Request) {
     );
   }
 
-  // Translate OpenAI-style stream chunks into the shape the frontend reads:
-  // data: {"choices":[{"delta":{"content":"..."}}]}  ->  data: {"delta":{"text":"..."}}
-  const reader = upstream.body.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let lineBuffer = '';
-  // One upstream SSE line -> the text it carries ('' when it carries none).
-  // Lines split across chunks are held in lineBuffer until complete.
-  function textFromLine(line: string): string {
+  // Buffer the whole upstream SSE payload, translate it, and return it as
+  // one plain response. A streaming ReadableStream response throws a bare
+  // Worker 1101 in the deployed build when the overloaded upstream stalls
+  // or drops mid-stream, outside anything the handler can catch; the
+  // frontend reads a plain body through the same reader loop.
+  let upstreamText: string;
+  try {
+    upstreamText = await upstream.text();
+  } catch (err) {
+    return Response.json(
+      { error: `智谱接口返回数据失败：${err instanceof Error ? err.message : '网络错误'}，请稍后重试。` },
+      { status: 502 },
+    );
+  }
+  const out: string[] = [];
+  for (const line of upstreamText.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed.startsWith('data:')) return '';
+    if (!trimmed.startsWith('data:')) continue;
     const data = trimmed.slice(5).trim();
-    if (data === '[DONE]') return '';
+    if (data === '[DONE]') continue;
     try {
-      return JSON.parse(data).choices?.[0]?.delta?.content ?? '';
+      const text = JSON.parse(data).choices?.[0]?.delta?.content ?? '';
+      if (text) out.push(sse(text));
     } catch {
-      return '';
+      // skip partial/garbled lines
     }
   }
-  const stream = new ReadableStream({
-    async pull(controller) {
-      let readResult: Awaited<ReturnType<typeof reader.read>>;
-      try {
-        readResult = await reader.read();
-      } catch {
-        // Upstream dropped mid-stream (e.g. overloaded): end the stream
-        // cleanly so the frontend sees a normal end, not a Worker 1101.
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
-        return;
-      }
-      const { done, value } = readResult;
-      if (done) {
-        const tail = textFromLine(lineBuffer);
-        if (tail) controller.enqueue(encoder.encode(sse(tail)));
-        lineBuffer = '';
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
-        return;
-      }
-      lineBuffer += decoder.decode(value, { stream: true });
-      const lines = lineBuffer.split('\n');
-      lineBuffer = lines.pop() ?? '';
-      for (const line of lines) {
-        const text = textFromLine(line);
-        if (text) controller.enqueue(encoder.encode(sse(text)));
-      }
-    },
-    cancel() {
-      // reader.cancel() rejects if the reader already errored; never let
-      // that rejection escape as an unhandled error in the isolate.
-      reader.cancel().catch(() => {});
-    },
-  });
-
-  return new Response(stream, {
+  out.push('data: [DONE]\n\n');
+  return new Response(out.join(''), {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
