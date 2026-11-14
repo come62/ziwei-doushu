@@ -58,6 +58,22 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
     return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
   }, [zoom]);
 
+  // 放大时手机「返回」只退出放大（回到推算层），不离开命盘页
+  useEffect(() => {
+    if (!zoom) return;
+    const onPop = () => { setZoom(false); setPreview(null); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [zoom]);
+  const openZoom = () => {
+    try { window.history.pushState({ zwZoom: 1 }, ''); } catch { /* ignore */ }
+    setZoom(true);
+  };
+  const closeZoom = () => {
+    if (window.history.state?.zwZoom) window.history.back(); // 触发 popstate 关闭
+    else { setZoom(false); setPreview(null); }
+  };
+
   // 全屏时锁住背景滚动
   useEffect(() => {
     if (!zoom) return;
@@ -129,7 +145,7 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
         className={zoom ? '' : 'lg:hidden'}
         style={zoom
           ? { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 70, display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', pointerEvents: 'none' }
-          : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 12px' }}
+          : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px' }}
       >
         {!zoom && <div>{header}</div>}
         <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
@@ -138,7 +154,7 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
               {busy ? '生成中…' : '⬇ 下载推算图'}
             </button>
           )}
-          <button type="button" onClick={() => { setZoom(z => !z); setPreview(null); }} style={zoomBtn}>
+          <button type="button" onClick={zoom ? closeZoom : openZoom} style={zoomBtn}>
             {zoom ? '✕ 关闭' : '🔍 放大'}
           </button>
         </div>

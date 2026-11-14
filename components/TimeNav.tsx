@@ -91,7 +91,7 @@ export default function TimeNav({
   const overlayInfo = getOverlayInfo();
 
   return (
-    <div className="mb-0.5 [container-type:inline-size]">
+    <div className="mb-0 [container-type:inline-size]">
       {/* 盘面模式：与本命/大限/流年时间层级独立 */}
       {!hideModeRow && <ModeBar displayMode={displayMode} onChange={onDisplayModeChange} />}
       {/* Tab 行 */}
@@ -234,7 +234,7 @@ export function ModeBar({
 }) {
   return (
     <div className="[container-type:inline-size]">
-      <div className="flex items-center rounded-xl p-0.5 gap-1 mb-1" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+      <div className="flex items-center rounded-xl p-0.5 gap-1 mb-0.5" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
         {([
           ['sanhe', '三合'], ['feixing', '飞星'], ['sihua', '四化'],
         ] as const).map(([mode, label]) => (
