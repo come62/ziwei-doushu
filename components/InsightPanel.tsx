@@ -391,7 +391,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
     <div className="flex flex-col h-full rounded-xl overflow-hidden" style={{ background: '#ffffff', border: '1px solid #cfc8b8', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
 
       {/* ── Topic buttons ── */}
-      <div className="flex-shrink-0 px-2 pt-2.5 pb-2" style={{ borderBottom: '1px solid #cfc8b8' }}>
+      <div className="flex-shrink-0 px-2 pt-1.5 pb-1.5" style={{ borderBottom: '1px solid #cfc8b8' }}>
         <div className="grid grid-cols-6 gap-1">
           {TOPICS.map(t => {
             const isActive = activeTopic === t.key;
@@ -400,7 +400,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
                 key={t.key}
                 onClick={() => handleTopicClick(t.key)}
                 disabled={loading}
-                className="py-2 text-[14px] font-medium rounded-lg transition-all duration-150 disabled:opacity-70"
+                className="py-1.5 text-[14px] font-medium rounded-lg transition-all duration-150 disabled:opacity-70"
                 style={{
                   background: isActive ? 'rgba(212,168,67,0.22)' : '#faf6ea',
                   border: `1px solid ${isActive ? '#b8922a' : '#cfc8b8'}`,
@@ -510,7 +510,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
       </div>
 
       {/* ── Input ── */}
-      <div className="flex-shrink-0 px-3 pb-3 pt-2" style={{ borderTop: '1px solid #cfc8b8' }}>
+      <div className="flex-shrink-0 px-3 pb-1.5 pt-1.5" style={{ borderTop: '1px solid #cfc8b8' }}>
         {selectedPalace && askedBranch !== selectedPalace.branch && !loading && (
           <button
             onClick={() => askPalace(selectedPalace)}
@@ -528,7 +528,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="继续追问，如：今年适合换工作吗？"
             disabled={loading}
-            className="flex-1 rounded-lg px-3 py-2 text-[16px] focus:outline-none transition-colors placeholder:text-[#6b6b62]"
+            className="flex-1 rounded-lg px-3 py-1.5 text-[16px] focus:outline-none transition-colors placeholder:text-[#6b6b62]"
             style={{
               background: '#ffffff',
               border: '1px solid #cfc8b8',
@@ -538,7 +538,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
           <button
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="px-4 py-2 rounded-lg text-[15px] font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 rounded-lg text-[15px] font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
               background: 'rgba(212,168,67,0.15)',
               border: '1px solid rgba(212,168,67,0.25)',

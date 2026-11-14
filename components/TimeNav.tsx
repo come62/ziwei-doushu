@@ -91,7 +91,7 @@ export default function TimeNav({
   const overlayInfo = getOverlayInfo();
 
   return (
-    <div className="mb-1.5 [container-type:inline-size]">
+    <div className="mb-0.5 [container-type:inline-size]">
       {/* 盘面模式：与本命/大限/流年时间层级独立 */}
       {!hideModeRow && <ModeBar displayMode={displayMode} onChange={onDisplayModeChange} />}
       {/* Tab 行 */}
@@ -119,7 +119,7 @@ export default function TimeNav({
         <div
           className="relative flex-1 flex items-center justify-center rounded-lg transition-all duration-200"
           style={{
-            padding: '1.5cqw 0',
+            padding: '1cqw 0',
             gap: '1cqw',
             background: view === 'liunian'
               ? 'rgba(212,168,67,0.12)'
@@ -213,7 +213,7 @@ function TabButton({
       className="flex-1 font-medium rounded-lg transition-all duration-200"
       style={{
         ...fs(3.4, 11),
-        padding: '1.5cqw 0',
+        padding: '1cqw 0',
         background: active ? 'rgba(212,168,67,0.12)' : 'transparent',
         color: active ? GOLD : INACTIVE,
         border: active ? '1px solid rgba(212,168,67,0.35)' : '1px solid transparent',
@@ -234,7 +234,7 @@ export function ModeBar({
 }) {
   return (
     <div className="[container-type:inline-size]">
-      <div className="flex items-center rounded-xl p-1 gap-1 mb-2" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+      <div className="flex items-center rounded-xl p-0.5 gap-1 mb-1" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
         {([
           ['sanhe', '三合'], ['feixing', '飞星'], ['sihua', '四化'],
         ] as const).map(([mode, label]) => (

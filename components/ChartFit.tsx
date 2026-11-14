@@ -21,6 +21,8 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
   const [areaH, setAreaH] = useState<number | null>(null);
   const [areaW, setAreaW] = useState<number | null>(null);
   const [zoom, setZoom] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
   useEffect(() => {
     const box = boxRef.current;
@@ -64,6 +66,37 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
     return () => { document.body.style.overflow = prev; };
   }, [zoom]);
 
+  // 导出当前命盘为图片（放大模式下使用）
+  const download = async () => {
+    const inner = innerRef.current;
+    if (!inner || busy) return;
+    setBusy(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(inner, {
+        scale: 3,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        onclone: (_doc, el) => {
+          el.style.transform = 'none';
+          el.style.position = 'static';
+        },
+      });
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `紫微命盘-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setPreview(url); // 部分手机浏览器拦截下载：同时弹出预览，可长按图片保存
+    } catch {
+      alert('生成图片失败，请重试');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const zoomBtn: React.CSSProperties = {
     padding: '4px 12px', fontSize: 14, borderRadius: 999, cursor: 'pointer',
     border: '1px solid rgba(176,141,70,0.6)', background: '#fff', color: '#5b3a1a',
@@ -96,12 +129,19 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
         className={zoom ? '' : 'lg:hidden'}
         style={zoom
           ? { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 70, display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', pointerEvents: 'none' }
-          : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px' }}
+          : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 12px' }}
       >
         {!zoom && <div>{header}</div>}
-        <button type="button" onClick={() => setZoom(z => !z)} style={{ ...zoomBtn, pointerEvents: 'auto' }}>
-          {zoom ? '✕ 关闭' : '🔍 放大'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
+          {zoom && (
+            <button type="button" onClick={download} disabled={busy} style={{ ...zoomBtn, opacity: busy ? 0.6 : 1 }}>
+              {busy ? '生成中…' : '⬇ 下载推算图'}
+            </button>
+          )}
+          <button type="button" onClick={() => { setZoom(z => !z); setPreview(null); }} style={zoomBtn}>
+            {zoom ? '✕ 关闭' : '🔍 放大'}
+          </button>
+        </div>
       </div>
       {/* 电脑端的「重新起盘」 */}
       {!zoom && <div className="hidden lg:block lg:mb-4">{header}</div>}
@@ -111,6 +151,16 @@ export default function ChartFit({ children, header }: { children: ReactNode; he
           {children}
         </div>
       </div>
+      {preview && (
+        <div
+          onClick={() => setPreview(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 80, background: 'rgba(0,0,0,0.85)', overflow: 'auto', padding: '56px 12px 24px', textAlign: 'center' }}
+        >
+          <p style={{ color: '#fff', fontSize: 14, marginBottom: 10 }}>若未自动保存，请长按图片保存（点空白处关闭）</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={preview} alt="紫微命盘" style={{ width: '100%', maxWidth: 720, borderRadius: 8, background: '#fff' }} />
+        </div>
+      )}
     </div>
   );
 }
