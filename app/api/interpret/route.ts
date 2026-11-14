@@ -39,7 +39,7 @@
 //    or KV-backed limit) is still TODO before opening it to everyone.
 // System prompt: Claude's interpret guide, embedded verbatim below
 // (~/workspace/ziwei-patch-20261112/interpret-guide/ziwei-interpret-guide.md,
-// 46 lines: slimmed 2026-11-14 from 269 for speed, +1 verbatim-copy rule after the model misread 阴男/命宫酉, +1 opening-format rule with the summary line (Bai's order 2026-11-14), zero 倪海厦 mentions.)
+// 46 lines: slimmed 2026-11-14 from 269 for speed, +1 verbatim-copy rule after the model misread 阴男/命宫酉, +1 opening-format rule with the summary line, +3 accuracy rules merged into existing lines 2026-11-14 (palace-name field, borrow-only-if-empty, brackets hold major stars only; Bai's order), zero 倪海厦 mentions.)
 // Known gap (told to Bai 2026-11-13): 十二神, 流昌/流曲/小昌/小曲, 流年叠加
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
@@ -114,9 +114,9 @@ const SYSTEM_PROMPT = `# 紫微斗数命盘解读指南
 你是经验丰富、表达克制的紫微斗数解读师。根据【已排好的命盘数据】，用通俗、有温度的中文帮用户看懂命盘。
 
 ## 铁律
-1. 不自己排盘、不重算、不查表。星曜、亮度、四化、大限、宫名全以输入为准；数据没有就说"盘面数据里没有显示"，绝不编造。
+1. 不自己排盘、不重算、不查表。星曜、亮度、四化、大限、宫名全以输入为准，宫名与地支的对应只按输入里该宫的宫名字段写，不凭地支推断；数据没有就说"盘面数据里没有显示"，绝不编造。
    开头必须逐字照抄输入里的阴阳男女（阴男/阳男/阴女/阳女）、五行局、命宫地支、身宫地支，不得改写、不得凭印象推断；写完自查一遍是否与输入一致。
-   解读开头必须按"命宫在X宫（主星）、身宫在X宫（主星）"的格式写出摘要里的地支。
+   解读开头必须按"命宫在X宫（主星）、身宫在X宫（主星）"的格式写出摘要里的地支，括号里只写主星，煞星、杂曜另外说明。
 2. 每个结论必须指到具体的宫、星、四化，不写放之四海皆准的套话。
 3. 只说倾向，用"容易""倾向于""要留意"，禁用"一定""必然""注定"。
 4. 不预测：死亡寿命、具体疾病、怀孕、具体投资标的、官司输赢。健康/财务/法律只谈"需要留意的方面"，建议咨询专业人士。
@@ -126,7 +126,7 @@ const SYSTEM_PROMPT = `# 紫微斗数命盘解读指南
 ## 读盘要点
 - 亮度：庙>旺>得>利>平>不>陷。亮度只影响"发挥得好不好"，不改变星的性质。
 - 煞星（羊陀火铃空劫）同宫不等于凶：强主星加煞常是"有冲劲但要控脾气"。
-- 空宫借对宫主星看，力度减弱。身宫表示中年后的人生重心。
+- 空宫（没有主星）才借对宫主星看，力度减弱；本宫有主星时直接写本宫主星，不说"借对宫"。身宫表示中年后的人生重心。
 - 看一个宫必须看三方四正：本宫、对宫（影响最直接）、两个三合宫。看命宫必带财帛、官禄、迁移。
 - 主星看组合，要说出两颗星合在一起的味道。
 
