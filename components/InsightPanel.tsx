@@ -172,7 +172,7 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
         if (sectionMatch) {
           return (
             <div key={i} className="pt-3 pb-0.5 first:pt-0">
-              <span className="text-[16px] font-semibold tracking-wide" style={{ color: 'var(--t-gold)' }}>
+              <span className="text-[16px] font-semibold tracking-wide" style={{ color: '#7a5a0e' }}>
                 【{sectionMatch[1]}】
               </span>
             </div>
@@ -181,11 +181,11 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
         if (line.trim() === '') return <div key={i} className="h-1" />;
         const parts = line.split(/\*\*(.+?)\*\*/);
         return (
-          <div key={i} className="text-[15px] leading-relaxed" style={{ color: 'var(--t-text2)' }}>
+          <div key={i} className="text-[15px] leading-relaxed" style={{ color: '#26261f' }}>
             {parts.map((part, j) =>
               j % 2 === 0
                 ? part
-                : <strong key={j} className="font-medium" style={{ color: 'var(--t-text)' }}>{part}</strong>
+                : <strong key={j} className="font-medium" style={{ color: '#111111' }}>{part}</strong>
             )}
           </div>
         );
@@ -193,7 +193,7 @@ function AiContent({ text, streaming }: { text: string; streaming?: boolean }) {
       {streaming && (
         <span
           className="inline-block w-1.5 h-3 ml-0.5 animate-pulse rounded-sm align-middle"
-          style={{ background: 'var(--t-gold)', opacity: 0.6 }}
+          style={{ background: '#7a5a0e', opacity: 0.6 }}
         />
       )}
     </div>
@@ -204,10 +204,9 @@ export default function InsightPanel({ chart, selectedPalace, selectedSiHua }: I
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTopic, setActiveTopic] = useState<string>('overview');
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const messagesRef = useRef<Message[]>([]); // always-current copy for closures
   const loadingRef = useRef(false);
-  const autoLoaded = useRef(false);
   const lastPalaceBranch = useRef<number | undefined>(undefined);
   const lastSiHuaKey = useRef<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -225,18 +224,9 @@ export default function InsightPanel({ chart, selectedPalace, selectedSiHua }: I
     }
   }, [messages]);
 
-  // Auto-generate 命格总览 on mount
-  useEffect(() => {
-    if (autoLoaded.current) return;
-    autoLoaded.current = true;
-    sendMessage(TOPIC_PROMPTS.overview, true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Inject palace analysis when palace selected
-  useEffect(() => {
-    if (!selectedPalace || selectedPalace.branch === lastPalaceBranch.current) return;
-    lastPalaceBranch.current = selectedPalace.branch;
-
+  // 点宫位只用来看三方四正，不自动解读；出现一个小按钮，顾客点了才问 AI
+  const [askedBranch, setAskedBranch] = useState<number | null>(null);
+  const askPalace = (selectedPalace: Palace) => {
     const majorStars = selectedPalace.stars.filter(s => s.type === 'major');
     const starDesc = majorStars.length > 0
       ? majorStars.map(s => `${s.name}${s.siHua ? '化' + s.siHua : ''}`).join('、')
@@ -257,8 +247,9 @@ ${selectedPalace.name}在命盘中的意义，以及这种星曜配置的整体�
 **【实际建议】**
 基于此宫的具体建议。`;
 
+    setAskedBranch(selectedPalace.branch);
     sendMessage(prompt, true);
-  }, [selectedPalace]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   // 注入四化飞化分析
   useEffect(() => {
@@ -397,10 +388,10 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
   };
 
   return (
-    <div className="flex flex-col h-full rounded-xl overflow-hidden card-glass">
+    <div className="flex flex-col h-full rounded-xl overflow-hidden" style={{ background: '#ffffff', border: '1px solid #cfc8b8', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
 
       {/* ── Topic buttons ── */}
-      <div className="flex-shrink-0 px-2 pt-2.5 pb-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+      <div className="flex-shrink-0 px-2 pt-2.5 pb-2" style={{ borderBottom: '1px solid #cfc8b8' }}>
         <div className="grid grid-cols-6 gap-1">
           {TOPICS.map(t => {
             const isActive = activeTopic === t.key;
@@ -409,11 +400,11 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
                 key={t.key}
                 onClick={() => handleTopicClick(t.key)}
                 disabled={loading}
-                className="py-2 text-[14px] font-medium rounded-lg transition-all duration-150 disabled:opacity-40"
+                className="py-2 text-[14px] font-medium rounded-lg transition-all duration-150 disabled:opacity-70"
                 style={{
-                  background: isActive ? 'rgba(212,168,67,0.12)' : 'transparent',
-                  border: `1px solid ${isActive ? 'rgba(212,168,67,0.3)' : 'var(--t-border)'}`,
-                  color: isActive ? 'var(--t-gold)' : 'var(--t-faint)',
+                  background: isActive ? 'rgba(212,168,67,0.22)' : '#faf6ea',
+                  border: `1px solid ${isActive ? '#b8922a' : '#cfc8b8'}`,
+                  color: isActive ? '#7a5a0e' : '#4a4a45',
                 }}
               >
                 {t.label}
@@ -426,11 +417,13 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
       {/* ── Messages ── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
 
-        {/* Loading state before first message */}
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="text-4xl mb-3" style={{ color: 'var(--t-gold)', opacity: 0.1 }}>✦</div>
-            <p className="text-[14px] animate-pulse" style={{ color: 'var(--t-faint)' }}>命格解读生成中…</p>
+        {/* 还没提问：只给提示，不自动解读 */}
+        {messages.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+            <div className="text-3xl mb-2" style={{ color: '#7a5a0e', opacity: 0.35 }}>✦</div>
+            <p className="text-[15px] leading-relaxed" style={{ color: '#26261f' }}>
+              点上面的选项，或在下面直接提问，<br />AI 才会开始解读
+            </p>
           </div>
         )}
 
@@ -451,7 +444,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
                     style={{
                       background: 'rgba(212,168,67,0.08)',
                       border: '1px solid rgba(212,168,67,0.18)',
-                      color: 'var(--t-gold)',
+                      color: '#7a5a0e',
                     }}
                   >
                     {msg.content}
@@ -468,7 +461,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
                 <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
                   <div
                     className="rounded-lg px-3 py-2.5 text-[15px] leading-relaxed"
-                    style={{ background: 'var(--t-card)', border: '1px solid var(--t-border)', color: 'var(--t-text2)' }}
+                    style={{ background: '#ffffff', border: '1px solid #cfc8b8', color: '#26261f' }}
                   >
                     <div>{msg.content}</div>
                     {msg.retryable && isLastMsg && (
@@ -479,7 +472,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
                         style={{
                           background: 'rgba(212,168,67,0.15)',
                           border: '1px solid rgba(212,168,67,0.25)',
-                          color: 'var(--t-gold)',
+                          color: '#7a5a0e',
                         }}
                       >
                         {loading ? '重试中…' : '重试'}
@@ -499,9 +492,9 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
               >
                 <div
                   className="text-[12px] tracking-widest mb-2 flex items-center gap-1.5"
-                  style={{ color: 'var(--t-faint)' }}
+                  style={{ color: '#4a4a45' }}
                 >
-                  <span style={{ color: 'var(--t-gold)', opacity: 0.4 }}>✦</span>
+                  <span style={{ color: '#7a5a0e', opacity: 0.4 }}>✦</span>
                   命理解读
                 </div>
                 <AiContent text={msg.content} streaming={loading && isLastMsg} />
@@ -509,10 +502,24 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
             );
           })}
         </AnimatePresence>
+        {loading && messages[messages.length - 1]?.role !== 'assistant' && (
+          <p className="text-[14px] animate-pulse text-center" style={{ color: '#4a4a45' }}>
+            AI 正在解读，免费模型有时要排队，请稍等…
+          </p>
+        )}
       </div>
 
       {/* ── Input ── */}
-      <div className="flex-shrink-0 px-3 pb-3 pt-2" style={{ borderTop: '1px solid var(--t-border)' }}>
+      <div className="flex-shrink-0 px-3 pb-3 pt-2" style={{ borderTop: '1px solid #cfc8b8' }}>
+        {selectedPalace && askedBranch !== selectedPalace.branch && !loading && (
+          <button
+            onClick={() => askPalace(selectedPalace)}
+            className="mb-2 w-full rounded-lg py-2 text-[14px] font-medium"
+            style={{ background: 'rgba(212,168,67,0.12)', border: '1px solid rgba(212,168,67,0.3)', color: '#7a5a0e' }}
+          >
+            ✦ 让 AI 解读【{selectedPalace.name}】
+          </button>
+        )}
         <div className="flex gap-2">
           <input
             type="text"
@@ -521,11 +528,11 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="继续追问，如：今年适合换工作吗？"
             disabled={loading}
-            className="flex-1 rounded-lg px-3 py-2 text-[16px] focus:outline-none transition-colors"
+            className="flex-1 rounded-lg px-3 py-2 text-[16px] focus:outline-none transition-colors placeholder:text-[#6b6b62]"
             style={{
-              background: 'var(--t-card)',
-              border: '1px solid var(--t-border)',
-              color: 'var(--t-text)',
+              background: '#ffffff',
+              border: '1px solid #cfc8b8',
+              color: '#111111',
             }}
           />
           <button
@@ -535,7 +542,7 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
             style={{
               background: 'rgba(212,168,67,0.15)',
               border: '1px solid rgba(212,168,67,0.25)',
-              color: 'var(--t-gold)',
+              color: '#7a5a0e',
             }}
           >
             {loading ? '…' : '追问'}
