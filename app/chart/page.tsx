@@ -8,14 +8,10 @@ import { generateChart } from '@/lib/ziwei/algorithm';
 import type { BirthInfo, ZiweiChart, Palace } from '@/lib/ziwei/types';
 
 /**
- * 命盘页 —— 开源版「排盘引擎 Demo」
- *
- * 这是一个最小可运行示例：用本仓库的排盘引擎 generateChart() 配合基础 UI
- * 组件，渲染一张完整紫微命盘 + 基础解读，并支持本命 / 大限 / 流年切换。
- *
- * 说明：线上商业版的完整交互界面（重设计的新 UI、AI 流式解读、合盘、分享
- * 卡片等）不在开源范围内；但排盘内核——安星算法、四化、格局识别、古籍库——
- * 完全开放（见 lib/ziwei/*），可自由二次开发出你自己的界面。
+ * 命盘页
+ * 手机：整屏固定。上面命盘铺满屏宽（可点「放大」），下面是和 AI 的对话框，
+ *       AI 不会自动解读，顾客点选项或自己提问才回答。
+ * 电脑：左右两栏。
  */
 export default function ChartPage() {
   const [chart, setChart] = useState<ZiweiChart | null>(null);
@@ -36,22 +32,21 @@ export default function ChartPage() {
     );
   }
 
-  // ── 已起盘：命盘 + 解读 ──
-  // 手机：整屏固定，上半屏命盘（可放大），下半屏解读 + 选项 + 追问输入框
-  // 电脑：左右两栏。InsightPanel 只挂载一次（避免重复请求 AI）
+  const backBtn = (
+    <button
+      type="button"
+      onClick={() => { setChart(null); setSelectedPalace(null); }}
+      style={{ padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
+    >
+      ← 重新起盘
+    </button>
+  );
+
+  // ── 已起盘：命盘 + 对话框（InsightPanel 只挂载一次） ──
   return (
     <main className="flex h-[100dvh] flex-col overflow-hidden lg:mx-auto lg:grid lg:h-auto lg:max-w-[1280px] lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-5 lg:overflow-visible lg:px-4 lg:py-6">
-      <div className="flex-shrink-0 px-3 py-1.5 lg:col-span-2 lg:px-0">
-        <button
-          type="button"
-          onClick={() => { setChart(null); setSelectedPalace(null); }}
-          style={{ padding: '4px 12px', fontSize: 14, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 8, background: 'transparent' }}
-        >
-          ← 重新起盘
-        </button>
-      </div>
-      <div className="h-[calc(50dvh-40px)] flex-shrink-0 lg:h-auto">
-        <ChartFit>
+      <div className="flex-shrink-0">
+        <ChartFit header={backBtn}>
           <ChartBoard chart={chart} onPalaceSelect={setSelectedPalace} />
         </ChartFit>
       </div>
