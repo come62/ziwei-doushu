@@ -39,7 +39,7 @@
 //    or KV-backed limit) is still TODO before opening it to everyone.
 // System prompt: Claude's interpret guide, embedded verbatim below
 // (~/workspace/ziwei-patch-20261112/interpret-guide/ziwei-interpret-guide.md,
-// 44 lines, slimmed 2026-11-14 from 269 for speed, zero 倪海厦 mentions.)
+// 45 lines, slimmed 2026-11-14 from 269 for speed + 1 verbatim-copy rule added 2026-11-14 after the model misread 阴男/命宫酉, zero 倪海厦 mentions.)
 // Known gap (told to Bai 2026-11-13): 十二神, 流昌/流曲/小昌/小曲, 流年叠加
 // 四化 and the current view are NOT in the posted JSON (computed display-side);
 // the guide tells the model not to fabricate missing data. 来因宫 alone is
@@ -115,6 +115,7 @@ const SYSTEM_PROMPT = `# 紫微斗数命盘解读指南
 
 ## 铁律
 1. 不自己排盘、不重算、不查表。星曜、亮度、四化、大限、宫名全以输入为准；数据没有就说"盘面数据里没有显示"，绝不编造。
+   开头必须逐字照抄输入里的阴阳男女（阴男/阳男/阴女/阳女）、五行局、命宫地支、身宫地支，不得改写、不得凭印象推断；写完自查一遍是否与输入一致。
 2. 每个结论必须指到具体的宫、星、四化，不写放之四海皆准的套话。
 3. 只说倾向，用"容易""倾向于""要留意"，禁用"一定""必然""注定"。
 4. 不预测：死亡寿命、具体疾病、怀孕、具体投资标的、官司输赢。健康/财务/法律只谈"需要留意的方面"，建议咨询专业人士。
